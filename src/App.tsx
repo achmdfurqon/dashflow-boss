@@ -2,8 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Session } from "@supabase/supabase-js";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
+import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Kegiatan from "./pages/Kegiatan";
 import POK from "./pages/POK";
@@ -14,6 +18,34 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  if (!session) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -21,13 +53,13 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
-          <Route path="/kegiatan" element={<DashboardLayout><Kegiatan /></DashboardLayout>} />
-          <Route path="/pok" element={<DashboardLayout><POK /></DashboardLayout>} />
-          <Route path="/pencairan" element={<DashboardLayout><Pencairan /></DashboardLayout>} />
-          <Route path="/eviden" element={<DashboardLayout><Eviden /></DashboardLayout>} />
-          <Route path="/media" element={<DashboardLayout><Media /></DashboardLayout>} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/kegiatan" element={<ProtectedRoute><DashboardLayout><Kegiatan /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/pok" element={<ProtectedRoute><DashboardLayout><POK /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/pencairan" element={<ProtectedRoute><DashboardLayout><Pencairan /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/eviden" element={<ProtectedRoute><DashboardLayout><Eviden /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/media" element={<ProtectedRoute><DashboardLayout><Media /></DashboardLayout></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

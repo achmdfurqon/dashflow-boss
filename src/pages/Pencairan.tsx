@@ -1,210 +1,145 @@
+import { useState, useEffect } from "react";
+import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, CheckCircle, Clock, XCircle, Calendar } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { PencairanForm } from "@/components/forms/PencairanForm";
+import { supabase } from "@/integrations/supabase/client";
+import { format, parseISO } from "date-fns";
 
 export default function Pencairan() {
-  const disbursements = [
-    {
-      id: 1,
-      nilai_pencairan: 45000000,
-      metode_pencairan: "Transfer Bank",
-      status_pencairan: "Disetujui",
-      tgl_pencairan: "2025-09-25",
-      pok_nama: "Belanja Perjalanan Dinas",
-      kode_akun: "521211"
-    },
-    {
-      id: 2,
-      nilai_pencairan: 15000000,
-      metode_pencairan: "Transfer Bank",
-      status_pencairan: "Pending",
-      tgl_pencairan: "2025-09-28",
-      pok_nama: "Belanja Bahan",
-      kode_akun: "521111"
-    },
-    {
-      id: 3,
-      nilai_pencairan: 22500000,
-      metode_pencairan: "Tunai",
-      status_pencairan: "Disetujui",
-      tgl_pencairan: "2025-09-20",
-      pok_nama: "Honorarium Narasumber",
-      kode_akun: "521213"
-    },
-    {
-      id: 4,
-      nilai_pencairan: 80000000,
-      metode_pencairan: "Transfer Bank",
-      status_pencairan: "Ditolak",
-      tgl_pencairan: "2025-09-18",
-      pok_nama: "Belanja Modal Peralatan",
-      kode_akun: "532111"
-    },
-    {
-      id: 5,
-      nilai_pencairan: 12000000,
-      metode_pencairan: "Transfer Bank",
-      status_pencairan: "Pending",
-      tgl_pencairan: "2025-09-30",
-      pok_nama: "Belanja Perjalanan Dinas",
-      kode_akun: "521211"
-    },
-  ];
+  const [searchQuery, setSearchQuery] = useState("");
+  const [pencairanItems, setPencairanItems] = useState<any[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(value);
+  useEffect(() => {
+    fetchPencairanItems();
+  }, []);
+
+  const fetchPencairanItems = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("pencairan")
+      .select("*, pok(*)")
+      .eq("user_id", user.id)
+      .order("request_date", { ascending: false });
+
+    if (data) setPencairanItems(data);
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "Disetujui":
-        return <CheckCircle className="h-4 w-4" />;
-      case "Pending":
-        return <Clock className="h-4 w-4" />;
-      case "Ditolak":
-        return <XCircle className="h-4 w-4" />;
-      default:
-        return null;
-    }
+  const handleSuccess = () => {
+    setDialogOpen(false);
+    fetchPencairanItems();
+  };
+
+  const filteredPencairan = pencairanItems.filter((item) =>
+    item.request_number.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+    }).format(amount);
   };
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case "Disetujui":
+      case "approved":
         return "default";
-      case "Pending":
+      case "pending":
         return "secondary";
-      case "Ditolak":
+      case "rejected":
         return "destructive";
-      default:
+      case "completed":
         return "outline";
+      default:
+        return "secondary";
     }
   };
 
-  const totalDisetujui = disbursements
-    .filter(d => d.status_pencairan === "Disetujui")
-    .reduce((sum, d) => sum + d.nilai_pencairan, 0);
-
-  const totalPending = disbursements
-    .filter(d => d.status_pencairan === "Pending")
-    .reduce((sum, d) => sum + d.nilai_pencairan, 0);
-
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Pencairan</h1>
-          <p className="text-muted-foreground mt-1">Manajemen pencairan dana kegiatan</p>
+          <h1 className="text-3xl font-bold">Pencairan</h1>
+          <p className="text-muted-foreground">Manajemen pencairan dana kegiatan</p>
         </div>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Tambah Pencairan
-        </Button>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Disetujui
-            </CardTitle>
-            <CheckCircle className="h-5 w-5 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-card-foreground">
-              {formatCurrency(totalDisetujui)}
-            </div>
-            <p className="text-xs text-success mt-1">
-              {disbursements.filter(d => d.status_pencairan === "Disetujui").length} pencairan
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Menunggu Persetujuan
-            </CardTitle>
-            <Clock className="h-5 w-5 text-warning" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-card-foreground">
-              {formatCurrency(totalPending)}
-            </div>
-            <p className="text-xs text-warning mt-1">
-              {disbursements.filter(d => d.status_pencairan === "Pending").length} pending
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Ditolak
-            </CardTitle>
-            <XCircle className="h-5 w-5 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-card-foreground">
-              {disbursements.filter(d => d.status_pencairan === "Ditolak").length}
-            </div>
-            <p className="text-xs text-destructive mt-1">Pencairan ditolak</p>
-          </CardContent>
-        </Card>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Permintaan Baru
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Buat Permintaan Pencairan</DialogTitle>
+            </DialogHeader>
+            <PencairanForm onSuccess={handleSuccess} />
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Daftar Pencairan</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {disbursements.map((item) => (
-              <Card key={item.id} className="hover:bg-muted/50 transition-colors">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-foreground">{item.pok_nama}</h3>
-                        <Badge variant="outline" className="text-xs">
-                          {item.kode_akun}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5" />
-                          <span>{item.tgl_pencairan}</span>
-                        </div>
-                        <span>•</span>
-                        <span>{item.metode_pencairan}</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-foreground">
-                          {formatCurrency(item.nilai_pencairan)}
-                        </div>
-                      </div>
-                      <Badge 
-                        variant={getStatusVariant(item.status_pencairan)}
-                        className="gap-1"
-                      >
-                        {getStatusIcon(item.status_pencairan)}
-                        {item.status_pencairan}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+        <CardContent className="pt-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Cari berdasarkan nomor permintaan..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid gap-4">
+        {filteredPencairan.map((item) => (
+          <Card key={item.id} className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>{item.request_number}</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {format(parseISO(item.request_date), "MMMM dd, yyyy")}
+                  </p>
+                </div>
+                <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Amount</p>
+                  <p className="font-medium text-lg">{formatCurrency(Number(item.amount))}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">POK</p>
+                  <p className="font-medium">{item.pok?.code || "N/A"}</p>
+                </div>
+              </div>
+              <div className="mt-4">
+                <p className="text-muted-foreground text-sm">Purpose</p>
+                <p className="text-sm">{item.purpose}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {filteredPencairan.length === 0 && (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              Tidak ada pencairan ditemukan
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

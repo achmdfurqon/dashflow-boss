@@ -1,178 +1,143 @@
+import { useState, useEffect } from "react";
+import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, DollarSign, TrendingUp, Package } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { POKForm } from "@/components/forms/POKForm";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function POK() {
-  const budgetItems = [
-    {
-      id: 1,
-      nama_akun: "Belanja Perjalanan Dinas",
-      kode_akun: "521211",
-      jenis_akun: "Belanja Operasional",
-      uraian: "Biaya perjalanan dinas dalam dan luar kota",
-      nilai_anggaran: 150000000,
-      terpakai: 108000000,
-      persentase: 72
-    },
-    {
-      id: 2,
-      nama_akun: "Belanja Bahan",
-      kode_akun: "521111",
-      jenis_akun: "Belanja Operasional",
-      uraian: "Pembelian bahan habis pakai dan ATK",
-      nilai_anggaran: 50000000,
-      terpakai: 32500000,
-      persentase: 65
-    },
-    {
-      id: 3,
-      nama_akun: "Honorarium Narasumber",
-      kode_akun: "521213",
-      jenis_akun: "Belanja Pegawai",
-      uraian: "Honor narasumber dan pembicara",
-      nilai_anggaran: 75000000,
-      terpakai: 56250000,
-      persentase: 75
-    },
-    {
-      id: 4,
-      nama_akun: "Belanja Modal Peralatan",
-      kode_akun: "532111",
-      jenis_akun: "Belanja Modal",
-      uraian: "Pengadaan peralatan kantor",
-      nilai_anggaran: 200000000,
-      terpakai: 120000000,
-      persentase: 60
-    },
-  ];
+  const [searchQuery, setSearchQuery] = useState("");
+  const [pokItems, setPokItems] = useState<any[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(value);
+  useEffect(() => {
+    fetchPOKItems();
+  }, []);
+
+  const fetchPOKItems = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("pok")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (data) setPokItems(data);
   };
 
-  const totalAnggaran = budgetItems.reduce((sum, item) => sum + item.nilai_anggaran, 0);
-  const totalTerpakai = budgetItems.reduce((sum, item) => sum + item.terpakai, 0);
-  const totalPersentase = Math.round((totalTerpakai / totalAnggaran) * 100);
+  const handleSuccess = () => {
+    setDialogOpen(false);
+    fetchPOKItems();
+  };
+
+  const filteredPOK = pokItems.filter((item) =>
+    item.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+    }).format(amount);
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">POK (Petunjuk Operasional Kegiatan)</h1>
-          <p className="text-muted-foreground mt-1">Manajemen anggaran dan kode akun</p>
+          <h1 className="text-3xl font-bold">POK Management</h1>
+          <p className="text-muted-foreground">Manajemen anggaran dan kode akun</p>
         </div>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Tambah POK
-        </Button>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Anggaran
-            </CardTitle>
-            <DollarSign className="h-5 w-5 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-card-foreground">
-              {formatCurrency(totalAnggaran)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">4 akun aktif</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Terpakai
-            </CardTitle>
-            <TrendingUp className="h-5 w-5 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-card-foreground">
-              {formatCurrency(totalTerpakai)}
-            </div>
-            <p className="text-xs text-success mt-1">{totalPersentase}% dari anggaran</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Sisa Anggaran
-            </CardTitle>
-            <Package className="h-5 w-5 text-info" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-card-foreground">
-              {formatCurrency(totalAnggaran - totalTerpakai)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">{100 - totalPersentase}% tersisa</p>
-          </CardContent>
-        </Card>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Tambah POK
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Buat POK Baru</DialogTitle>
+            </DialogHeader>
+            <POKForm onSuccess={handleSuccess} />
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Daftar POK</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {budgetItems.map((item) => (
-              <Card key={item.id} className="hover:bg-muted/50 transition-colors">
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-foreground">{item.nama_akun}</h3>
-                          <Badge variant="outline" className="text-xs">
-                            {item.kode_akun}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">{item.uraian}</p>
-                        <Badge>{item.jenis_akun}</Badge>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-foreground">
-                          {formatCurrency(item.nilai_anggaran)}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          Terpakai: {formatCurrency(item.terpakai)}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Realisasi</span>
-                        <span className="font-medium">{item.persentase}%</span>
-                      </div>
-                      <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full ${
-                            item.persentase >= 80 ? "bg-warning" : 
-                            item.persentase >= 50 ? "bg-success" : 
-                            "bg-primary"
-                          }`}
-                          style={{ width: `${item.persentase}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+        <CardContent className="pt-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Cari POK..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid gap-4">
+        {filteredPOK.map((pok) => {
+          const usagePercentage = (Number(pok.used_amount) / Number(pok.budget_amount)) * 100;
+          return (
+            <Card key={pok.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle>{pok.code}</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">{pok.description}</p>
+                  </div>
+                  <Badge variant={pok.status === "active" ? "default" : "secondary"}>
+                    {pok.status}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Budget</p>
+                    <p className="font-medium">{formatCurrency(Number(pok.budget_amount))}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Used</p>
+                    <p className="font-medium">{formatCurrency(Number(pok.used_amount))}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Remaining</p>
+                    <p className="font-medium">
+                      {formatCurrency(Number(pok.budget_amount) - Number(pok.used_amount))}
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Usage</span>
+                    <span className="font-medium">{usagePercentage.toFixed(1)}%</span>
+                  </div>
+                  <Progress value={usagePercentage} className="h-2" />
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+
+        {filteredPOK.length === 0 && (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              Tidak ada POK ditemukan
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
