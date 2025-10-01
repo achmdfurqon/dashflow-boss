@@ -7,7 +7,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -16,10 +15,11 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 const pencairanSchema = z.object({
-  pok_id: z.string().min(1, "POK is required"),
-  request_number: z.string().min(1, "Request number is required"),
-  amount: z.string().min(1, "Amount is required"),
-  purpose: z.string().min(1, "Purpose is required"),
+  id_pok: z.string().min(1, "POK is required"),
+  nilai_pencairan: z.string().min(1, "Amount is required"),
+  metode_pencairan: z.string().min(1, "Payment method is required"),
+  status_pencairan: z.enum(["pending", "approved", "rejected"]),
+  tgl_pencairan: z.date(),
 });
 
 type PencairanFormData = z.infer<typeof pencairanSchema>;
@@ -31,12 +31,15 @@ interface PencairanFormProps {
 export const PencairanForm = ({ onSuccess }: PencairanFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [requestDate, setRequestDate] = useState<Date>(new Date());
+  const [tglPencairan, setTglPencairan] = useState<Date>(new Date());
   const [pokList, setPokList] = useState<any[]>([]);
-  const [selectedPok, setSelectedPok] = useState<string>("");
+  const [statusPencairan, setStatusPencairan] = useState<string>("pending");
 
-  const { register, handleSubmit, formState: { errors } } = useForm<PencairanFormData>({
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<PencairanFormData>({
     resolver: zodResolver(pencairanSchema),
+    defaultValues: {
+      status_pencairan: "pending",
+    },
   });
 
   useEffect(() => {
@@ -50,8 +53,7 @@ export const PencairanForm = ({ onSuccess }: PencairanFormProps) => {
     const { data } = await supabase
       .from("pok")
       .select("*")
-      .eq("user_id", user.id)
-      .eq("status", "active");
+      .eq("user_id", user.id);
     
     if (data) setPokList(data);
   };
@@ -64,17 +66,16 @@ export const PencairanForm = ({ onSuccess }: PencairanFormProps) => {
 
       const { error } = await supabase.from("pencairan").insert({
         user_id: user.id,
-        pok_id: data.pok_id,
-        request_number: data.request_number,
-        amount: parseFloat(data.amount),
-        request_date: format(requestDate, "yyyy-MM-dd"),
-        purpose: data.purpose,
-        status: "pending",
+        id_pok: data.id_pok,
+        nilai_pencairan: parseFloat(data.nilai_pencairan),
+        metode_pencairan: data.metode_pencairan,
+        status_pencairan: data.status_pencairan,
+        tgl_pencairan: format(tglPencairan, "yyyy-MM-dd"),
       });
 
       if (error) throw error;
 
-      toast({ title: "Success", description: "Disbursement request created successfully" });
+      toast({ title: "Success", description: "Disbursement created successfully" });
       onSuccess();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -86,57 +87,73 @@ export const PencairanForm = ({ onSuccess }: PencairanFormProps) => {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="pok_id">POK</Label>
-        <Select value={selectedPok} onValueChange={setSelectedPok} {...register("pok_id")}>
+        <Label htmlFor="id_pok">POK</Label>
+        <Select onValueChange={(value) => setValue("id_pok", value)}>
           <SelectTrigger>
             <SelectValue placeholder="Select POK" />
           </SelectTrigger>
           <SelectContent>
             {pokList.map((pok) => (
               <SelectItem key={pok.id} value={pok.id}>
-                {pok.code} - {pok.description}
+                {pok.kode_akun} - {pok.nama_akun}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        {errors.pok_id && <p className="text-sm text-destructive">{errors.pok_id.message}</p>}
+        {errors.id_pok && <p className="text-sm text-destructive">{errors.id_pok.message}</p>}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="request_number">Request Number</Label>
-        <Input id="request_number" {...register("request_number")} placeholder="e.g., REQ-001" />
-        {errors.request_number && <p className="text-sm text-destructive">{errors.request_number.message}</p>}
+        <Label htmlFor="nilai_pencairan">Nilai Pencairan</Label>
+        <Input id="nilai_pencairan" type="number" step="0.01" {...register("nilai_pencairan")} placeholder="0.00" />
+        {errors.nilai_pencairan && <p className="text-sm text-destructive">{errors.nilai_pencairan.message}</p>}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="amount">Amount</Label>
-        <Input id="amount" type="number" step="0.01" {...register("amount")} placeholder="0.00" />
-        {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
+        <Label htmlFor="metode_pencairan">Metode Pencairan</Label>
+        <Input id="metode_pencairan" {...register("metode_pencairan")} placeholder="e.g., Transfer, Tunai" />
+        {errors.metode_pencairan && <p className="text-sm text-destructive">{errors.metode_pencairan.message}</p>}
       </div>
 
       <div className="space-y-2">
-        <Label>Request Date</Label>
+        <Label htmlFor="status_pencairan">Status</Label>
+        <Select value={statusPencairan} onValueChange={(value) => {
+          setStatusPencairan(value);
+          setValue("status_pencairan", value as any);
+        }}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Tanggal Pencairan</Label>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" className={cn("w-full justify-start text-left font-normal")}>
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {requestDate ? format(requestDate, "PPP") : "Pick a date"}
+              {tglPencairan ? format(tglPencairan, "PPP") : "Pick a date"}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0">
-            <Calendar mode="single" selected={requestDate} onSelect={(date) => date && setRequestDate(date)} initialFocus className="pointer-events-auto" />
+            <Calendar mode="single" selected={tglPencairan} onSelect={(date) => {
+              if (date) {
+                setTglPencairan(date);
+                setValue("tgl_pencairan", date);
+              }
+            }} initialFocus className="pointer-events-auto" />
           </PopoverContent>
         </Popover>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="purpose">Purpose</Label>
-        <Textarea id="purpose" {...register("purpose")} placeholder="Enter purpose of disbursement" />
-        {errors.purpose && <p className="text-sm text-destructive">{errors.purpose.message}</p>}
-      </div>
-
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Creating..." : "Create Disbursement Request"}
+        {loading ? "Creating..." : "Create Disbursement"}
       </Button>
     </form>
   );

@@ -11,11 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const evidenSchema = z.object({
-  kegiatan_id: z.string().min(1, "Activity is required"),
-  document_type: z.enum(["proposal", "report", "invoice", "photo", "other"]),
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-  file_url: z.string().optional(),
+  id_ref_eviden: z.string().min(1, "Evidence type is required"),
+  file_eviden: z.string().optional(),
+  deskripsi: z.string().optional(),
+  id_giat: z.string().optional(),
+  id_non_giat: z.string().optional(),
 });
 
 type EvidenFormData = z.infer<typeof evidenSchema>;
@@ -28,15 +28,17 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [kegiatanList, setKegiatanList] = useState<any[]>([]);
-  const [selectedKegiatan, setSelectedKegiatan] = useState<string>("");
-  const [docType, setDocType] = useState<string>("report");
+  const [nonKegiatanList, setNonKegiatanList] = useState<any[]>([]);
+  const [refEvidenList, setRefEvidenList] = useState<any[]>([]);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<EvidenFormData>({
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<EvidenFormData>({
     resolver: zodResolver(evidenSchema),
   });
 
   useEffect(() => {
     fetchKegiatanList();
+    fetchNonKegiatanList();
+    fetchRefEvidenList();
   }, []);
 
   const fetchKegiatanList = async () => {
@@ -51,6 +53,26 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
     if (data) setKegiatanList(data);
   };
 
+  const fetchNonKegiatanList = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("non_kegiatan")
+      .select("*")
+      .eq("user_id", user.id);
+    
+    if (data) setNonKegiatanList(data);
+  };
+
+  const fetchRefEvidenList = async () => {
+    const { data } = await supabase
+      .from("ref_eviden")
+      .select("*");
+    
+    if (data) setRefEvidenList(data);
+  };
+
   const onSubmit = async (data: EvidenFormData) => {
     setLoading(true);
     try {
@@ -59,16 +81,16 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
 
       const { error } = await supabase.from("eviden").insert({
         user_id: user.id,
-        kegiatan_id: data.kegiatan_id,
-        document_type: data.document_type,
-        title: data.title,
-        description: data.description || null,
-        file_url: data.file_url || null,
+        id_ref_eviden: data.id_ref_eviden,
+        file_eviden: data.file_eviden || null,
+        deskripsi: data.deskripsi || null,
+        id_giat: data.id_giat || null,
+        id_non_giat: data.id_non_giat || null,
       });
 
       if (error) throw error;
 
-      toast({ title: "Success", description: "Evidence document created successfully" });
+      toast({ title: "Success", description: "Evidence created successfully" });
       onSuccess();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -80,56 +102,66 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="kegiatan_id">Activity</Label>
-        <Select value={selectedKegiatan} onValueChange={setSelectedKegiatan} {...register("kegiatan_id")}>
+        <Label htmlFor="id_ref_eviden">Jenis Eviden</Label>
+        <Select onValueChange={(value) => setValue("id_ref_eviden", value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select evidence type" />
+          </SelectTrigger>
+          <SelectContent>
+            {refEvidenList.map((ref) => (
+              <SelectItem key={ref.id} value={ref.id}>
+                {ref.jenis_eviden}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {errors.id_ref_eviden && <p className="text-sm text-destructive">{errors.id_ref_eviden.message}</p>}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="file_eviden">File Eviden URL (optional)</Label>
+        <Input id="file_eviden" {...register("file_eviden")} placeholder="https://..." />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="deskripsi">Deskripsi (optional)</Label>
+        <Textarea id="deskripsi" {...register("deskripsi")} placeholder="Enter description" />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="id_giat">Kegiatan (optional)</Label>
+        <Select onValueChange={(value) => setValue("id_giat", value)}>
           <SelectTrigger>
             <SelectValue placeholder="Select activity" />
           </SelectTrigger>
           <SelectContent>
             {kegiatanList.map((kegiatan) => (
               <SelectItem key={kegiatan.id} value={kegiatan.id}>
-                {kegiatan.name}
+                {kegiatan.nama}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        {errors.kegiatan_id && <p className="text-sm text-destructive">{errors.kegiatan_id.message}</p>}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="document_type">Document Type</Label>
-        <Select value={docType} onValueChange={setDocType} {...register("document_type")}>
+        <Label htmlFor="id_non_giat">Non Kegiatan (optional)</Label>
+        <Select onValueChange={(value) => setValue("id_non_giat", value)}>
           <SelectTrigger>
-            <SelectValue />
+            <SelectValue placeholder="Select non-activity" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="proposal">Proposal</SelectItem>
-            <SelectItem value="report">Report</SelectItem>
-            <SelectItem value="invoice">Invoice</SelectItem>
-            <SelectItem value="photo">Photo</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
+            {nonKegiatanList.map((nonKegiatan) => (
+              <SelectItem key={nonKegiatan.id} value={nonKegiatan.id}>
+                {nonKegiatan.nama_non_giat}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="title">Title</Label>
-        <Input id="title" {...register("title")} placeholder="Document title" />
-        {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea id="description" {...register("description")} placeholder="Optional description" />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="file_url">File URL (optional)</Label>
-        <Input id="file_url" {...register("file_url")} placeholder="https://..." />
-      </div>
-
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Creating..." : "Create Evidence Document"}
+        {loading ? "Creating..." : "Create Evidence"}
       </Button>
     </form>
   );
