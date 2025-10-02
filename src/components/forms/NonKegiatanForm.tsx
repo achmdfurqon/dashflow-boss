@@ -28,7 +28,10 @@ export const NonKegiatanForm = ({ onSuccess }: NonKegiatanFormProps) => {
   const [pokList, setPokList] = useState<any[]>([]);
   const [nonKegiatanList, setNonKegiatanList] = useState<any[]>([]);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<NonKegiatanFormData>({
+  const [selectedNonKegiatan, setSelectedNonKegiatan] = useState<string>("");
+  const [selectedPok, setSelectedPok] = useState<string>("");
+
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<NonKegiatanFormData>({
     resolver: zodResolver(nonKegiatanSchema),
   });
 
@@ -71,8 +74,8 @@ export const NonKegiatanForm = ({ onSuccess }: NonKegiatanFormProps) => {
         user_id: user.id,
         nama_non_giat: data.nama_non_giat,
         jenis_non_giat: data.jenis_non_giat,
-        id_non_giat_sblm: data.id_non_giat_sblm || null,
-        id_pok: data.id_pok || null,
+        id_non_giat_sblm: selectedNonKegiatan || null,
+        id_pok: selectedPok || null,
       });
 
       if (error) throw error;
@@ -102,7 +105,10 @@ export const NonKegiatanForm = ({ onSuccess }: NonKegiatanFormProps) => {
 
       <div className="space-y-2">
         <Label htmlFor="id_non_giat_sblm">Non Kegiatan Sebelumnya (optional)</Label>
-        <Select {...register("id_non_giat_sblm")}>
+        <Select value={selectedNonKegiatan} onValueChange={(value) => {
+          setSelectedNonKegiatan(value);
+          setValue("id_non_giat_sblm", value);
+        }}>
           <SelectTrigger>
             <SelectValue placeholder="Select previous non-activity" />
           </SelectTrigger>
@@ -118,7 +124,10 @@ export const NonKegiatanForm = ({ onSuccess }: NonKegiatanFormProps) => {
 
       <div className="space-y-2">
         <Label htmlFor="id_pok">POK (optional)</Label>
-        <Select {...register("id_pok")}>
+        <Select value={selectedPok} onValueChange={(value) => {
+          setSelectedPok(value);
+          setValue("id_pok", value);
+        }}>
           <SelectTrigger>
             <SelectValue placeholder="Select POK" />
           </SelectTrigger>

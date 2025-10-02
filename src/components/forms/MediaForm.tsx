@@ -31,8 +31,11 @@ export const MediaForm = ({ onSuccess }: MediaFormProps) => {
   const [selectedKegiatan, setSelectedKegiatan] = useState<string>("");
   const [fileType, setFileType] = useState<string>("photo");
 
-  const { register, handleSubmit, formState: { errors } } = useForm<MediaFormData>({
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<MediaFormData>({
     resolver: zodResolver(mediaSchema),
+    defaultValues: {
+      file_type: "photo",
+    },
   });
 
   useEffect(() => {
@@ -59,11 +62,11 @@ export const MediaForm = ({ onSuccess }: MediaFormProps) => {
 
       const { error } = await supabase.from("media").insert({
         user_id: user.id,
-        kegiatan_id: data.kegiatan_id || null,
+        kegiatan_id: selectedKegiatan || null,
         title: data.title,
         description: data.description || null,
         file_url: data.file_url || null,
-        file_type: data.file_type,
+        file_type: fileType as "photo" | "document" | "video",
       });
 
       if (error) throw error;
@@ -81,15 +84,17 @@ export const MediaForm = ({ onSuccess }: MediaFormProps) => {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="kegiatan_id">Activity (optional)</Label>
-        <Select value={selectedKegiatan} onValueChange={setSelectedKegiatan} {...register("kegiatan_id")}>
+        <Select value={selectedKegiatan} onValueChange={(value) => {
+          setSelectedKegiatan(value);
+          setValue("kegiatan_id", value);
+        }}>
           <SelectTrigger>
             <SelectValue placeholder="Select activity (optional)" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">None</SelectItem>
             {kegiatanList.map((kegiatan) => (
               <SelectItem key={kegiatan.id} value={kegiatan.id}>
-                {kegiatan.name}
+                {kegiatan.nama}
               </SelectItem>
             ))}
           </SelectContent>
@@ -98,7 +103,10 @@ export const MediaForm = ({ onSuccess }: MediaFormProps) => {
 
       <div className="space-y-2">
         <Label htmlFor="file_type">File Type</Label>
-        <Select value={fileType} onValueChange={setFileType} {...register("file_type")}>
+        <Select value={fileType} onValueChange={(value) => {
+          setFileType(value);
+          setValue("file_type", value as "photo" | "document" | "video");
+        }}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>

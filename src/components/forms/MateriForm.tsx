@@ -24,8 +24,9 @@ export const MateriForm = ({ onSuccess }: MateriFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [kegiatanList, setKegiatanList] = useState<any[]>([]);
+  const [selectedKegiatan, setSelectedKegiatan] = useState<string>("");
 
-  const { register, handleSubmit, formState: { errors } } = useForm<MateriFormData>({
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<MateriFormData>({
     resolver: zodResolver(materiSchema),
   });
 
@@ -54,7 +55,7 @@ export const MateriForm = ({ onSuccess }: MateriFormProps) => {
       const { error } = await supabase.from("materi").insert({
         user_id: user.id,
         file_materi: data.file_materi,
-        id_giat: data.id_giat || null,
+        id_giat: selectedKegiatan || null,
       });
 
       if (error) throw error;
@@ -77,8 +78,11 @@ export const MateriForm = ({ onSuccess }: MateriFormProps) => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="id_giat">Kegiatan (optional)</Label>
-        <Select {...register("id_giat")}>
+        <Label htmlFor="id_giat">Activity (optional)</Label>
+        <Select value={selectedKegiatan} onValueChange={(value) => {
+          setSelectedKegiatan(value);
+          setValue("id_giat", value);
+        }}>
           <SelectTrigger>
             <SelectValue placeholder="Select activity" />
           </SelectTrigger>

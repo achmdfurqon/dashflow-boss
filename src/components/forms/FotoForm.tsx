@@ -24,8 +24,9 @@ export const FotoForm = ({ onSuccess }: FotoFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [kegiatanList, setKegiatanList] = useState<any[]>([]);
+  const [selectedKegiatan, setSelectedKegiatan] = useState<string>("");
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FotoFormData>({
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FotoFormData>({
     resolver: zodResolver(fotoSchema),
   });
 
@@ -54,7 +55,7 @@ export const FotoForm = ({ onSuccess }: FotoFormProps) => {
       const { error } = await supabase.from("foto").insert({
         user_id: user.id,
         file_foto: data.file_foto,
-        id_giat: data.id_giat || null,
+        id_giat: selectedKegiatan || null,
       });
 
       if (error) throw error;
@@ -77,8 +78,11 @@ export const FotoForm = ({ onSuccess }: FotoFormProps) => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="id_giat">Kegiatan (optional)</Label>
-        <Select {...register("id_giat")}>
+        <Label htmlFor="id_giat">Activity (optional)</Label>
+        <Select value={selectedKegiatan} onValueChange={(value) => {
+          setSelectedKegiatan(value);
+          setValue("id_giat", value);
+        }}>
           <SelectTrigger>
             <SelectValue placeholder="Select activity" />
           </SelectTrigger>
