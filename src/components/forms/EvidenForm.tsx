@@ -57,7 +57,7 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("non_kegiatan")
       .select("*")
       .eq("user_id", user.id);
@@ -66,7 +66,7 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
   };
 
   const fetchRefEvidenList = async () => {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("ref_eviden")
       .select("*");
     
@@ -79,7 +79,7 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase.from("eviden").insert({
+      const { error } = await (supabase as any).from("eviden").insert({
         user_id: user.id,
         id_ref_eviden: data.id_ref_eviden,
         file_eviden: data.file_eviden || null,

@@ -52,7 +52,7 @@ export const MateriForm = ({ onSuccess }: MateriFormProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase.from("materi").insert({
+      const { error } = await (supabase as any).from("materi").insert({
         user_id: user.id,
         file_materi: data.file_materi,
         id_giat: selectedKegiatan || null,

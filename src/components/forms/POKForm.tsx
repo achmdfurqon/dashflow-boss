@@ -37,7 +37,7 @@ export const POKForm = ({ onSuccess }: POKFormProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase.from("pok").insert({
+      const { error } = await (supabase as any).from("pok").insert({
         user_id: user.id,
         nama_akun: data.nama_akun,
         kode_akun: data.kode_akun,

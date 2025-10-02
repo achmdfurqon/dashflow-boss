@@ -56,7 +56,7 @@ export const NonKegiatanForm = ({ onSuccess }: NonKegiatanFormProps) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("non_kegiatan")
       .select("*")
       .eq("user_id", user.id);
@@ -70,7 +70,7 @@ export const NonKegiatanForm = ({ onSuccess }: NonKegiatanFormProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase.from("non_kegiatan").insert({
+      const { error } = await (supabase as any).from("non_kegiatan").insert({
         user_id: user.id,
         nama_non_giat: data.nama_non_giat,
         jenis_non_giat: data.jenis_non_giat,

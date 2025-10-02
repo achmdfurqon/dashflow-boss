@@ -52,7 +52,7 @@ export const FotoForm = ({ onSuccess }: FotoFormProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase.from("foto").insert({
+      const { error } = await (supabase as any).from("foto").insert({
         user_id: user.id,
         file_foto: data.file_foto,
         id_giat: selectedKegiatan || null,

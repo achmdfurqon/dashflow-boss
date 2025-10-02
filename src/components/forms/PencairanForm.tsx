@@ -64,7 +64,7 @@ export const PencairanForm = ({ onSuccess }: PencairanFormProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase.from("pencairan").insert({
+      const { error } = await (supabase as any).from("pencairan").insert({
         user_id: user.id,
         id_pok: data.id_pok,
         nilai_pencairan: parseFloat(data.nilai_pencairan),

@@ -88,7 +88,7 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase.from("kegiatan").insert({
+      const { error } = await (supabase as any).from("kegiatan").insert({
         user_id: user.id,
         jenis_giat: data.jenis_giat,
         nama: data.nama,
