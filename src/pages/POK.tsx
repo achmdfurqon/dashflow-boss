@@ -37,8 +37,9 @@ export default function POK() {
   };
 
   const filteredPOK = pokItems.filter((item) =>
-    item.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.description.toLowerCase().includes(searchQuery.toLowerCase())
+    item.kode_akun.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.nama_akun.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.uraian.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const formatCurrency = (amount: number) => {
@@ -87,43 +88,32 @@ export default function POK() {
 
       <div className="grid gap-4">
         {filteredPOK.map((pok) => {
-          const usagePercentage = (Number(pok.used_amount) / Number(pok.budget_amount)) * 100;
+          const usagePercentage = 0; // Will be calculated based on pencairan records
           return (
             <Card key={pok.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle>{pok.code}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">{pok.description}</p>
+                    <CardTitle className="flex items-center gap-2">
+                      <span className="text-sm font-mono">{pok.kode_akun}</span>
+                      <span>-</span>
+                      <span>{pok.nama_akun}</span>
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">{pok.uraian}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Jenis: {pok.jenis_akun}</p>
                   </div>
-                  <Badge variant={pok.status === "active" ? "default" : "secondary"}>
-                    {pok.status}
-                  </Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Budget</p>
-                    <p className="font-medium">{formatCurrency(Number(pok.budget_amount))}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Used</p>
-                    <p className="font-medium">{formatCurrency(Number(pok.used_amount))}</p>
+                    <p className="text-muted-foreground">Nilai Anggaran</p>
+                    <p className="font-medium">{formatCurrency(Number(pok.nilai_anggaran))}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Remaining</p>
-                    <p className="font-medium">
-                      {formatCurrency(Number(pok.budget_amount) - Number(pok.used_amount))}
-                    </p>
+                    <p className="text-muted-foreground">Dibuat</p>
+                    <p className="font-medium">{new Date(pok.created_at).toLocaleDateString('id-ID')}</p>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Usage</span>
-                    <span className="font-medium">{usagePercentage.toFixed(1)}%</span>
-                  </div>
-                  <Progress value={usagePercentage} className="h-2" />
                 </div>
               </CardContent>
             </Card>
