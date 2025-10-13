@@ -26,7 +26,7 @@ export default function Pencairan() {
       .from("pencairan")
       .select("*, pok(*)")
       .eq("user_id", user.id)
-      .order("request_date", { ascending: false });
+      .order("tgl_pencairan", { ascending: false });
 
     if (data) setPencairanItems(data);
   };
@@ -36,16 +36,17 @@ export default function Pencairan() {
     fetchPencairanItems();
   };
 
-  const filteredPencairan = pencairanItems.filter((item) =>
-    item.request_number.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
     }).format(amount);
   };
+
+  const filteredPencairan = pencairanItems.filter((item) =>
+    item.metode_pencairan?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    formatCurrency(Number(item.nilai_pencairan)).toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -90,7 +91,7 @@ export default function Pencairan() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Cari berdasarkan nomor permintaan..."
+              placeholder="Cari berdasarkan metode atau nilai..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -105,28 +106,26 @@ export default function Pencairan() {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
-                  <CardTitle>{item.request_number}</CardTitle>
+                  <CardTitle>{item.metode_pencairan}</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {format(parseISO(item.request_date), "MMMM dd, yyyy")}
+                    {format(parseISO(item.tgl_pencairan), "dd MMMM yyyy")}
                   </p>
                 </div>
-                <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
+                <Badge variant={getStatusVariant(item.status_pencairan)}>{item.status_pencairan}</Badge>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-muted-foreground">Amount</p>
-                  <p className="font-medium text-lg">{formatCurrency(Number(item.amount))}</p>
+                  <p className="text-muted-foreground">Nilai Pencairan</p>
+                  <p className="font-medium text-lg">{formatCurrency(Number(item.nilai_pencairan))}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">POK</p>
-                  <p className="font-medium">{item.pok?.code || "N/A"}</p>
+                  <p className="font-medium">
+                    {item.pok ? `${item.pok.kode_akun} - ${item.pok.nama_akun}` : "N/A"}
+                  </p>
                 </div>
-              </div>
-              <div className="mt-4">
-                <p className="text-muted-foreground text-sm">Purpose</p>
-                <p className="text-sm">{item.purpose}</p>
               </div>
             </CardContent>
           </Card>
