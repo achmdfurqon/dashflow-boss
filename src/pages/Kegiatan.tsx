@@ -29,7 +29,7 @@ export default function Kegiatan() {
       .from("kegiatan")
       .select("*")
       .eq("user_id", user.id)
-      .order("start_date", { ascending: false });
+      .order("waktu_mulai", { ascending: false });
 
     if (data) setActivities(data);
   };
@@ -40,13 +40,13 @@ export default function Kegiatan() {
   };
 
   const filteredActivities = activities.filter((activity) =>
-    activity.name.toLowerCase().includes(searchQuery.toLowerCase())
+    activity.nama.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const activitiesOnSelectedDate = activities.filter((activity) => {
     if (!selectedDate) return false;
-    const startDate = parseISO(activity.start_date);
-    const endDate = parseISO(activity.end_date);
+    const startDate = parseISO(activity.waktu_mulai);
+    const endDate = parseISO(activity.waktu_selesai);
     return selectedDate >= startDate && selectedDate <= endDate;
   });
 
@@ -100,39 +100,30 @@ export default function Kegiatan() {
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle>{activity.name}</CardTitle>
+                      <CardTitle>{activity.nama}</CardTitle>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {format(parseISO(activity.start_date), "MMM dd, yyyy")} -{" "}
-                        {format(parseISO(activity.end_date), "MMM dd, yyyy")}
+                        {format(parseISO(activity.waktu_mulai), "MMM dd, yyyy")} -{" "}
+                        {format(parseISO(activity.waktu_selesai), "MMM dd, yyyy")}
                       </p>
                     </div>
-                    <div className="flex gap-2">
-                      <Badge variant={activity.type === "internal" ? "default" : "secondary"}>
-                        {activity.type}
-                      </Badge>
-                      <Badge
-                        variant={
-                          activity.status === "completed"
-                            ? "default"
-                            : activity.status === "ongoing"
-                            ? "secondary"
-                            : "outline"
-                        }
-                      >
-                        {activity.status}
-                      </Badge>
-                    </div>
+                    <Badge variant="default">
+                      {activity.jenis_giat}
+                    </Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
-                      <p className="text-muted-foreground">Location</p>
-                      <p className="font-medium">{activity.location}</p>
+                      <p className="text-muted-foreground">Tempat</p>
+                      <p className="font-medium">{activity.tempat}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Organizer</p>
-                      <p className="font-medium">{activity.organizer}</p>
+                      <p className="text-muted-foreground">Penyelenggara</p>
+                      <p className="font-medium">{activity.penyelenggara}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Jenis Lokasi</p>
+                      <p className="font-medium capitalize">{activity.jenis_lokasi}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -164,8 +155,8 @@ export default function Kegiatan() {
                   modifiers={{
                     hasActivity: (date) =>
                       activities.some((activity) => {
-                        const startDate = parseISO(activity.start_date);
-                        const endDate = parseISO(activity.end_date);
+                        const startDate = parseISO(activity.waktu_mulai);
+                        const endDate = parseISO(activity.waktu_selesai);
                         return date >= startDate && date <= endDate;
                       }),
                   }}
@@ -193,15 +184,15 @@ export default function Kegiatan() {
                     activitiesOnSelectedDate.map((activity) => (
                       <div key={activity.id} className="p-4 border rounded-lg space-y-2">
                         <div className="flex justify-between items-start">
-                          <h3 className="font-semibold">{activity.name}</h3>
-                          <Badge variant={activity.type === "internal" ? "default" : "secondary"}>
-                            {activity.type}
+                          <h3 className="font-semibold">{activity.nama}</h3>
+                          <Badge variant="default">
+                            {activity.jenis_giat}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">{activity.location}</p>
+                        <p className="text-sm text-muted-foreground">{activity.tempat}</p>
                         <p className="text-sm text-muted-foreground">
-                          {format(parseISO(activity.start_date), "MMM dd")} -{" "}
-                          {format(parseISO(activity.end_date), "MMM dd, yyyy")}
+                          {format(parseISO(activity.waktu_mulai), "MMM dd")} -{" "}
+                          {format(parseISO(activity.waktu_selesai), "MMM dd, yyyy")}
                         </p>
                       </div>
                     ))
