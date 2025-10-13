@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -9,13 +10,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ManageJenisEviden } from "./ManageJenisEviden";
 
 const evidenSchema = z.object({
-  id_ref_eviden: z.string().min(1, "Evidence type is required"),
+  title: z.string().min(1, "Nama eviden harus diisi"),
+  id_ref_eviden: z.string().min(1, "Jenis eviden harus dipilih"),
   file_eviden: z.string().optional(),
   deskripsi: z.string().optional(),
   id_giat: z.string().optional(),
-  id_non_giat: z.string().optional(),
+  tahun: z.string().optional(),
 });
 
 type EvidenFormData = z.infer<typeof evidenSchema>;
@@ -28,8 +32,8 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [kegiatanList, setKegiatanList] = useState<any[]>([]);
-  const [nonKegiatanList, setNonKegiatanList] = useState<any[]>([]);
   const [refEvidenList, setRefEvidenList] = useState<any[]>([]);
+  const [manageDialogOpen, setManageDialogOpen] = useState(false);
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<EvidenFormData>({
     resolver: zodResolver(evidenSchema),
@@ -37,7 +41,6 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
 
   useEffect(() => {
     fetchKegiatanList();
-    fetchNonKegiatanList();
     fetchRefEvidenList();
   }, []);
 
@@ -51,18 +54,6 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
       .eq("user_id", user.id);
     
     if (data) setKegiatanList(data);
-  };
-
-  const fetchNonKegiatanList = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data } = await (supabase as any)
-      .from("non_kegiatan")
-      .select("*")
-      .eq("user_id", user.id);
-    
-    if (data) setNonKegiatanList(data);
   };
 
   const fetchRefEvidenList = async () => {
@@ -81,11 +72,12 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
 
       const { error } = await (supabase as any).from("eviden").insert({
         user_id: user.id,
+        title: data.title,
         id_ref_eviden: data.id_ref_eviden,
         file_eviden: data.file_eviden || null,
         deskripsi: data.deskripsi || null,
         id_giat: data.id_giat || null,
-        id_non_giat: data.id_non_giat || null,
+        tahun: data.tahun ? parseInt(data.tahun) : null,
       });
 
       if (error) throw error;
@@ -102,10 +94,32 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="id_ref_eviden">Jenis Eviden</Label>
+        <Label htmlFor="title">Nama Eviden</Label>
+        <Input id="title" {...register("title")} placeholder="Masukkan nama eviden" />
+        {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <Label htmlFor="id_ref_eviden">Jenis Eviden</Label>
+          <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
+            <DialogTrigger asChild>
+              <Button type="button" variant="ghost" size="sm">
+                <Settings className="h-4 w-4 mr-1" />
+                Kelola
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Kelola Jenis Eviden</DialogTitle>
+              </DialogHeader>
+              <ManageJenisEviden onUpdate={fetchRefEvidenList} />
+            </DialogContent>
+          </Dialog>
+        </div>
         <Select onValueChange={(value) => setValue("id_ref_eviden", value)}>
           <SelectTrigger>
-            <SelectValue placeholder="Select evidence type" />
+            <SelectValue placeholder="Pilih jenis eviden" />
           </SelectTrigger>
           <SelectContent>
             {refEvidenList.map((ref) => (
@@ -119,20 +133,20 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="file_eviden">File Eviden URL (optional)</Label>
+        <Label htmlFor="file_eviden">File Eviden (opsional)</Label>
         <Input id="file_eviden" {...register("file_eviden")} placeholder="https://..." />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="deskripsi">Deskripsi (optional)</Label>
-        <Textarea id="deskripsi" {...register("deskripsi")} placeholder="Enter description" />
+        <Label htmlFor="deskripsi">Deskripsi (opsional)</Label>
+        <Textarea id="deskripsi" {...register("deskripsi")} placeholder="Masukkan deskripsi" />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="id_giat">Kegiatan (optional)</Label>
+        <Label htmlFor="id_giat">Kegiatan (opsional)</Label>
         <Select onValueChange={(value) => setValue("id_giat", value)}>
           <SelectTrigger>
-            <SelectValue placeholder="Select activity" />
+            <SelectValue placeholder="Pilih kegiatan" />
           </SelectTrigger>
           <SelectContent>
             {kegiatanList.map((kegiatan) => (
@@ -145,23 +159,19 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="id_non_giat">Non Kegiatan (optional)</Label>
-        <Select onValueChange={(value) => setValue("id_non_giat", value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select non-activity" />
-          </SelectTrigger>
-          <SelectContent>
-            {nonKegiatanList.map((nonKegiatan) => (
-              <SelectItem key={nonKegiatan.id} value={nonKegiatan.id}>
-                {nonKegiatan.nama_non_giat}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label htmlFor="tahun">Tahun (opsional)</Label>
+        <Input 
+          id="tahun" 
+          type="number" 
+          {...register("tahun")} 
+          placeholder="2025" 
+          min="2000"
+          max="2100"
+        />
       </div>
 
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Creating..." : "Create Evidence"}
+        {loading ? "Menyimpan..." : "Simpan Eviden"}
       </Button>
     </form>
   );

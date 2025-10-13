@@ -17,41 +17,93 @@ export type Database = {
       eviden: {
         Row: {
           created_at: string
-          description: string | null
-          document_type: string
-          file_url: string | null
+          deskripsi: string | null
+          file_eviden: string | null
           id: string
-          kegiatan_id: string | null
-          title: string
-          upload_date: string
+          id_giat: string | null
+          id_non_giat: string | null
+          id_ref_eviden: string | null
+          tahun: number | null
+          title: string | null
+          updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          description?: string | null
-          document_type: string
-          file_url?: string | null
+          deskripsi?: string | null
+          file_eviden?: string | null
           id?: string
-          kegiatan_id?: string | null
-          title: string
-          upload_date?: string
+          id_giat?: string | null
+          id_non_giat?: string | null
+          id_ref_eviden?: string | null
+          tahun?: number | null
+          title?: string | null
+          updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
-          description?: string | null
-          document_type?: string
-          file_url?: string | null
+          deskripsi?: string | null
+          file_eviden?: string | null
           id?: string
-          kegiatan_id?: string | null
-          title?: string
-          upload_date?: string
+          id_giat?: string | null
+          id_non_giat?: string | null
+          id_ref_eviden?: string | null
+          tahun?: number | null
+          title?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "eviden_kegiatan_id_fkey"
-            columns: ["kegiatan_id"]
+            foreignKeyName: "eviden_id_giat_fkey"
+            columns: ["id_giat"]
+            isOneToOne: false
+            referencedRelation: "kegiatan"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eviden_id_non_giat_fkey"
+            columns: ["id_non_giat"]
+            isOneToOne: false
+            referencedRelation: "non_kegiatan"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eviden_id_ref_eviden_fkey"
+            columns: ["id_ref_eviden"]
+            isOneToOne: false
+            referencedRelation: "ref_eviden"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      foto: {
+        Row: {
+          created_at: string
+          file_foto: string
+          id: string
+          id_giat: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_foto: string
+          id?: string
+          id_giat?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_foto?: string
+          id?: string
+          id_giat?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "foto_id_giat_fkey"
+            columns: ["id_giat"]
             isOneToOne: false
             referencedRelation: "kegiatan"
             referencedColumns: ["id"]
@@ -60,131 +112,189 @@ export type Database = {
       }
       kegiatan: {
         Row: {
+          agenda: string | null
           created_at: string
-          end_date: string
+          disposisi: string | null
+          file_laporan: string | null
+          file_surat: string | null
           id: string
-          location: string
-          name: string
-          organizer: string
-          start_date: string
-          status: string
-          type: string
+          id_giat_sblm: string | null
+          id_pok: string | null
+          jenis_giat: string
+          jenis_lokasi: string
+          nama: string
+          no_surat: string | null
+          penyelenggara: string
+          tempat: string
+          tgl_surat: string | null
           updated_at: string
           user_id: string
+          waktu_mulai: string
+          waktu_selesai: string
         }
         Insert: {
+          agenda?: string | null
           created_at?: string
-          end_date: string
+          disposisi?: string | null
+          file_laporan?: string | null
+          file_surat?: string | null
           id?: string
-          location: string
-          name: string
-          organizer: string
-          start_date: string
-          status?: string
-          type: string
+          id_giat_sblm?: string | null
+          id_pok?: string | null
+          jenis_giat: string
+          jenis_lokasi: string
+          nama: string
+          no_surat?: string | null
+          penyelenggara: string
+          tempat: string
+          tgl_surat?: string | null
           updated_at?: string
           user_id: string
+          waktu_mulai: string
+          waktu_selesai: string
         }
         Update: {
+          agenda?: string | null
           created_at?: string
-          end_date?: string
+          disposisi?: string | null
+          file_laporan?: string | null
+          file_surat?: string | null
           id?: string
-          location?: string
-          name?: string
-          organizer?: string
-          start_date?: string
-          status?: string
-          type?: string
+          id_giat_sblm?: string | null
+          id_pok?: string | null
+          jenis_giat?: string
+          jenis_lokasi?: string
+          nama?: string
+          no_surat?: string | null
+          penyelenggara?: string
+          tempat?: string
+          tgl_surat?: string | null
           updated_at?: string
           user_id?: string
+          waktu_mulai?: string
+          waktu_selesai?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "kegiatan_id_pok_fkey"
+            columns: ["id_pok"]
+            isOneToOne: false
+            referencedRelation: "pok"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      media: {
+      materi: {
         Row: {
           created_at: string
-          description: string | null
-          file_type: string
-          file_url: string | null
+          file_materi: string
           id: string
-          kegiatan_id: string | null
-          title: string
-          upload_date: string
+          id_giat: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
-          description?: string | null
-          file_type: string
-          file_url?: string | null
+          file_materi: string
           id?: string
-          kegiatan_id?: string | null
-          title: string
-          upload_date?: string
+          id_giat?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
-          description?: string | null
-          file_type?: string
-          file_url?: string | null
+          file_materi?: string
           id?: string
-          kegiatan_id?: string | null
-          title?: string
-          upload_date?: string
+          id_giat?: string | null
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "media_kegiatan_id_fkey"
-            columns: ["kegiatan_id"]
+            foreignKeyName: "materi_id_giat_fkey"
+            columns: ["id_giat"]
             isOneToOne: false
             referencedRelation: "kegiatan"
             referencedColumns: ["id"]
           },
         ]
       }
-      pencairan: {
+      non_kegiatan: {
         Row: {
-          amount: number
           created_at: string
           id: string
-          pok_id: string | null
-          purpose: string
-          request_date: string
-          request_number: string
-          status: string
+          id_non_giat_sblm: string | null
+          id_pok: string | null
+          jenis_non_giat: string
+          nama_non_giat: string
           updated_at: string
           user_id: string
         }
         Insert: {
-          amount: number
           created_at?: string
           id?: string
-          pok_id?: string | null
-          purpose: string
-          request_date: string
-          request_number: string
-          status?: string
+          id_non_giat_sblm?: string | null
+          id_pok?: string | null
+          jenis_non_giat: string
+          nama_non_giat: string
           updated_at?: string
           user_id: string
         }
         Update: {
-          amount?: number
           created_at?: string
           id?: string
-          pok_id?: string | null
-          purpose?: string
-          request_date?: string
-          request_number?: string
-          status?: string
+          id_non_giat_sblm?: string | null
+          id_pok?: string | null
+          jenis_non_giat?: string
+          nama_non_giat?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "pencairan_pok_id_fkey"
-            columns: ["pok_id"]
+            foreignKeyName: "non_kegiatan_id_pok_fkey"
+            columns: ["id_pok"]
+            isOneToOne: false
+            referencedRelation: "pok"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pencairan: {
+        Row: {
+          created_at: string
+          id: string
+          id_pok: string | null
+          metode_pencairan: string
+          nilai_pencairan: number
+          status_pencairan: string
+          tgl_pencairan: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          id_pok?: string | null
+          metode_pencairan: string
+          nilai_pencairan: number
+          status_pencairan?: string
+          tgl_pencairan: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          id_pok?: string | null
+          metode_pencairan?: string
+          nilai_pencairan?: number
+          status_pencairan?: string
+          tgl_pencairan?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pencairan_id_pok_fkey"
+            columns: ["id_pok"]
             isOneToOne: false
             referencedRelation: "pok"
             referencedColumns: ["id"]
@@ -193,37 +303,55 @@ export type Database = {
       }
       pok: {
         Row: {
-          budget_amount: number
-          code: string
           created_at: string
-          description: string
           id: string
-          status: string
+          jenis_akun: string
+          kode_akun: string
+          nama_akun: string
+          nilai_anggaran: number
           updated_at: string
-          used_amount: number
+          uraian: string
           user_id: string
         }
         Insert: {
-          budget_amount: number
-          code: string
           created_at?: string
-          description: string
           id?: string
-          status?: string
+          jenis_akun: string
+          kode_akun: string
+          nama_akun: string
+          nilai_anggaran: number
           updated_at?: string
-          used_amount?: number
+          uraian: string
           user_id: string
         }
         Update: {
-          budget_amount?: number
-          code?: string
           created_at?: string
-          description?: string
           id?: string
-          status?: string
+          jenis_akun?: string
+          kode_akun?: string
+          nama_akun?: string
+          nilai_anggaran?: number
           updated_at?: string
-          used_amount?: number
+          uraian?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      ref_eviden: {
+        Row: {
+          created_at: string
+          id: string
+          jenis_eviden: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          jenis_eviden: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          jenis_eviden?: string
         }
         Relationships: []
       }

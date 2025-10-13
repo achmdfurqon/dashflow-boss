@@ -26,7 +26,7 @@ export default function Eviden() {
       .from("eviden")
       .select("*, kegiatan(*)")
       .eq("user_id", user.id)
-      .order("upload_date", { ascending: false });
+      .order("created_at", { ascending: false });
 
     if (data) setEvidenItems(data);
   };
@@ -37,7 +37,7 @@ export default function Eviden() {
   };
 
   const filteredEviden = evidenItems.filter((item) =>
-    item.title.toLowerCase().includes(searchQuery.toLowerCase())
+    item.title?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getDocIcon = (type: string) => {
@@ -94,26 +94,36 @@ export default function Eviden() {
             <CardHeader>
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg">
-                  {getDocIcon(item.document_type)}
+                  <FileText className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
                   <CardTitle className="text-base">{item.title}</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {format(parseISO(item.upload_date), "MMM dd, yyyy")}
+                    {item.tahun || "Tanpa tahun"}
                   </p>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Badge variant="secondary">{item.document_type}</Badge>
-              {item.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
+              {item.deskripsi && (
+                <p className="text-sm text-muted-foreground line-clamp-2">{item.deskripsi}</p>
               )}
               {item.kegiatan && (
                 <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground">Related Activity</p>
-                  <p className="text-sm font-medium">{item.kegiatan.name}</p>
+                  <p className="text-xs text-muted-foreground">Kegiatan Terkait</p>
+                  <p className="text-sm font-medium">{item.kegiatan.nama}</p>
                 </div>
+              )}
+              {item.file_eviden && (
+                <a 
+                  href={item.file_eviden} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary hover:underline flex items-center gap-1"
+                >
+                  <File className="h-4 w-4" />
+                  Lihat File
+                </a>
               )}
             </CardContent>
           </Card>
