@@ -15,9 +15,11 @@ import { ManageJenisEviden } from "./ManageJenisEviden";
 
 const evidenSchema = z.object({
   title: z.string().min(1, "Nama eviden harus diisi"),
+  tipe_eviden: z.enum(["foto", "dokumen"]),
   id_ref_eviden: z.string().min(1, "Jenis eviden harus dipilih"),
   file_eviden: z.string().optional(),
   deskripsi: z.string().optional(),
+  id_pok: z.string().optional(),
   id_giat: z.string().optional(),
   tahun: z.string().optional(),
 });
@@ -32,8 +34,10 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [kegiatanList, setKegiatanList] = useState<any[]>([]);
+  const [pokList, setPokList] = useState<any[]>([]);
   const [refEvidenList, setRefEvidenList] = useState<any[]>([]);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
+  const [selectedPok, setSelectedPok] = useState<string>();
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<EvidenFormData>({
     resolver: zodResolver(evidenSchema),
@@ -42,18 +46,42 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
   useEffect(() => {
     fetchKegiatanList();
     fetchRefEvidenList();
+    fetchPokList();
   }, []);
+
+  useEffect(() => {
+    if (selectedPok) {
+      fetchKegiatanList();
+    }
+  }, [selectedPok]);
 
   const fetchKegiatanList = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data } = await supabase
+    let query = supabase
       .from("kegiatan")
       .select("*")
       .eq("user_id", user.id);
     
+    if (selectedPok) {
+      query = query.eq("id_pok", selectedPok);
+    }
+
+    const { data } = await query;
     if (data) setKegiatanList(data);
+  };
+
+  const fetchPokList = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("pok")
+      .select("*")
+      .eq("user_id", user.id);
+    
+    if (data) setPokList(data);
   };
 
   const fetchRefEvidenList = async () => {
@@ -73,9 +101,11 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
       const { error } = await (supabase as any).from("eviden").insert({
         user_id: user.id,
         title: data.title,
+        tipe_eviden: data.tipe_eviden,
         id_ref_eviden: data.id_ref_eviden,
         file_eviden: data.file_eviden || null,
         deskripsi: data.deskripsi || null,
+        id_pok: data.id_pok || null,
         id_giat: data.id_giat || null,
         tahun: data.tahun ? parseInt(data.tahun) : null,
       });
@@ -97,6 +127,20 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
         <Label htmlFor="title">Nama Eviden</Label>
         <Input id="title" {...register("title")} placeholder="Masukkan nama eviden" />
         {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="tipe_eviden">Tipe Eviden</Label>
+        <Select onValueChange={(value) => setValue("tipe_eviden", value as "foto" | "dokumen")}>
+          <SelectTrigger>
+            <SelectValue placeholder="Pilih tipe eviden" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="foto">Foto</SelectItem>
+            <SelectItem value="dokumen">Dokumen</SelectItem>
+          </SelectContent>
+        </Select>
+        {errors.tipe_eviden && <p className="text-sm text-destructive">{errors.tipe_eviden.message}</p>}
       </div>
 
       <div className="space-y-2">
@@ -140,6 +184,25 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
       <div className="space-y-2">
         <Label htmlFor="deskripsi">Deskripsi (opsional)</Label>
         <Textarea id="deskripsi" {...register("deskripsi")} placeholder="Masukkan deskripsi" />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="id_pok">POK (opsional)</Label>
+        <Select onValueChange={(value) => {
+          setValue("id_pok", value);
+          setSelectedPok(value);
+        }}>
+          <SelectTrigger>
+            <SelectValue placeholder="Pilih POK" />
+          </SelectTrigger>
+          <SelectContent>
+            {pokList.map((pok) => (
+              <SelectItem key={pok.id} value={pok.id}>
+                {pok.kode_akun} - {pok.nama_akun}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">

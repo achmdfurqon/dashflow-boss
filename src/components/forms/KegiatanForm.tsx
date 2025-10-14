@@ -26,9 +26,7 @@ const kegiatanSchema = z.object({
   penyelenggara: z.string().min(1, "Organizer is required"),
   no_surat: z.string().optional(),
   tgl_surat: z.date().optional(),
-  file_surat: z.string().optional(),
   disposisi: z.string().optional(),
-  file_laporan: z.string().optional(),
   id_giat_sblm: z.string().optional(),
   id_pok: z.string().optional(),
 });
@@ -100,9 +98,7 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
         penyelenggara: data.penyelenggara,
         no_surat: data.no_surat || null,
         tgl_surat: suratDate ? format(suratDate, "yyyy-MM-dd") : null,
-        file_surat: data.file_surat || null,
         disposisi: data.disposisi || null,
-        file_laporan: data.file_laporan || null,
         id_giat_sblm: data.id_giat_sblm || null,
         id_pok: data.id_pok || null,
       });
@@ -228,18 +224,8 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="file_surat">File Surat URL (optional)</Label>
-        <Input id="file_surat" {...register("file_surat")} placeholder="https://..." />
-      </div>
-
-      <div className="space-y-2">
         <Label htmlFor="disposisi">Disposisi (optional)</Label>
         <Textarea id="disposisi" {...register("disposisi")} placeholder="Enter disposition" />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="file_laporan">File Laporan URL (optional)</Label>
-        <Input id="file_laporan" {...register("file_laporan")} placeholder="https://..." />
       </div>
 
       <div className="space-y-2">

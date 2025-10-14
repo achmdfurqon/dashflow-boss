@@ -13,7 +13,6 @@ import Kegiatan from "./pages/Kegiatan";
 import POK from "./pages/POK";
 import Pencairan from "./pages/Pencairan";
 import Eviden from "./pages/Eviden";
-import Media from "./pages/Media";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,7 +58,6 @@ const App = () => (
           <Route path="/pok" element={<ProtectedRoute><DashboardLayout><POK /></DashboardLayout></ProtectedRoute>} />
           <Route path="/pencairan" element={<ProtectedRoute><DashboardLayout><Pencairan /></DashboardLayout></ProtectedRoute>} />
           <Route path="/eviden" element={<ProtectedRoute><DashboardLayout><Eviden /></DashboardLayout></ProtectedRoute>} />
-          <Route path="/media" element={<ProtectedRoute><DashboardLayout><Media /></DashboardLayout></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

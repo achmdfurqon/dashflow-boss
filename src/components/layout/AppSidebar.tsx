@@ -3,7 +3,6 @@ import {
   Calendar, 
   DollarSign, 
   FileText, 
-  Image,
   Package
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
@@ -27,7 +26,6 @@ const items = [
   { title: "POK", url: "/pok", icon: DollarSign },
   { title: "Pencairan", url: "/pencairan", icon: Package },
   { title: "Eviden", url: "/eviden", icon: FileText },
-  { title: "Foto & Materi", url: "/media", icon: Image },
 ];
 
 export function AppSidebar() {

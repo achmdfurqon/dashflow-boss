@@ -22,8 +22,10 @@ export type Database = {
           id: string
           id_giat: string | null
           id_non_giat: string | null
+          id_pok: string | null
           id_ref_eviden: string | null
           tahun: number | null
+          tipe_eviden: string | null
           title: string | null
           updated_at: string
           user_id: string
@@ -35,8 +37,10 @@ export type Database = {
           id?: string
           id_giat?: string | null
           id_non_giat?: string | null
+          id_pok?: string | null
           id_ref_eviden?: string | null
           tahun?: number | null
+          tipe_eviden?: string | null
           title?: string | null
           updated_at?: string
           user_id: string
@@ -48,8 +52,10 @@ export type Database = {
           id?: string
           id_giat?: string | null
           id_non_giat?: string | null
+          id_pok?: string | null
           id_ref_eviden?: string | null
           tahun?: number | null
+          tipe_eviden?: string | null
           title?: string | null
           updated_at?: string
           user_id?: string
@@ -67,6 +73,13 @@ export type Database = {
             columns: ["id_non_giat"]
             isOneToOne: false
             referencedRelation: "non_kegiatan"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eviden_id_pok_fkey"
+            columns: ["id_pok"]
+            isOneToOne: false
+            referencedRelation: "pok"
             referencedColumns: ["id"]
           },
           {
@@ -115,8 +128,6 @@ export type Database = {
           agenda: string | null
           created_at: string
           disposisi: string | null
-          file_laporan: string | null
-          file_surat: string | null
           id: string
           id_giat_sblm: string | null
           id_pok: string | null
@@ -136,8 +147,6 @@ export type Database = {
           agenda?: string | null
           created_at?: string
           disposisi?: string | null
-          file_laporan?: string | null
-          file_surat?: string | null
           id?: string
           id_giat_sblm?: string | null
           id_pok?: string | null
@@ -157,8 +166,6 @@ export type Database = {
           agenda?: string | null
           created_at?: string
           disposisi?: string | null
-          file_laporan?: string | null
-          file_surat?: string | null
           id?: string
           id_giat_sblm?: string | null
           id_pok?: string | null
