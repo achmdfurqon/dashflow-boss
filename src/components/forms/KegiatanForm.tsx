@@ -81,17 +81,26 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
   };
 
   const onSubmit = async (data: KegiatanFormData) => {
+    if (!startDate || !endDate) {
+      toast({ 
+        title: "Error", 
+        description: "Please select start and end dates", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await (supabase as any).from("kegiatan").insert({
+      const { error } = await supabase.from("kegiatan").insert({
         user_id: user.id,
         jenis_giat: data.jenis_giat,
         nama: data.nama,
-        waktu_mulai: startDate!.toISOString(),
-        waktu_selesai: endDate!.toISOString(),
+        waktu_mulai: startDate.toISOString(),
+        waktu_selesai: endDate.toISOString(),
         jenis_lokasi: data.jenis_lokasi,
         tempat: data.tempat,
         agenda: data.agenda || null,
