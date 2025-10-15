@@ -42,6 +42,8 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
   const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
+  const [startTime, setStartTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("17:00");
   const [suratDate, setSuratDate] = useState<Date>();
   const [jenisLokasi, setJenisLokasi] = useState<string>("kantor");
   const [pokList, setPokList] = useState<any[]>([]);
@@ -98,12 +100,22 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Combine date and time
+      const [startHour, startMinute] = startTime.split(':').map(Number);
+      const [endHour, endMinute] = endTime.split(':').map(Number);
+      
+      const waktuMulai = new Date(startDate);
+      waktuMulai.setHours(startHour, startMinute, 0, 0);
+      
+      const waktuSelesai = new Date(endDate);
+      waktuSelesai.setHours(endHour, endMinute, 0, 0);
+
       const { error } = await supabase.from("kegiatan").insert({
         user_id: user.id,
         jenis_giat: data.jenis_giat,
         nama: data.nama,
-        waktu_mulai: startDate.toISOString(),
-        waktu_selesai: endDate.toISOString(),
+        waktu_mulai: waktuMulai.toISOString(),
+        waktu_selesai: waktuSelesai.toISOString(),
         jenis_lokasi: data.jenis_lokasi,
         tempat: data.tempat,
         agenda: data.agenda || null,
@@ -142,7 +154,7 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Waktu Mulai</Label>
+          <Label>Tanggal Mulai</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
@@ -160,7 +172,19 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
         </div>
 
         <div className="space-y-2">
-          <Label>Waktu Selesai</Label>
+          <Label>Jam Mulai</Label>
+          <Input
+            type="time"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+            className="w-full"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Tanggal Selesai</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
@@ -175,6 +199,16 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
               }} initialFocus className="pointer-events-auto" />
             </PopoverContent>
           </Popover>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Jam Selesai</Label>
+          <Input
+            type="time"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+            className="w-full"
+          />
         </div>
       </div>
 

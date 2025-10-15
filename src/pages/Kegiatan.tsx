@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { KegiatanForm } from "@/components/forms/KegiatanForm";
+import { MonthlyCalendar } from "@/components/calendar/MonthlyCalendar";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, isWithinInterval } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -339,70 +340,11 @@ export default function Kegiatan() {
         </TabsContent>
 
         <TabsContent value="calendar" className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Kalender Kegiatan</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  className="rounded-md border pointer-events-auto"
-                  modifiers={{
-                    hasActivity: (date) =>
-                      activities.some((activity) => {
-                        const startDate = parseISO(activity.waktu_mulai);
-                        const endDate = parseISO(activity.waktu_selesai);
-                        return date >= startDate && date <= endDate;
-                      }),
-                  }}
-                  modifiersStyles={{
-                    hasActivity: {
-                      backgroundColor: "hsl(var(--primary))",
-                      color: "hsl(var(--primary-foreground))",
-                      fontWeight: "bold",
-                    },
-                  }}
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  <CalendarIcon className="inline mr-2 h-5 w-5" />
-                  {selectedDate ? format(selectedDate, "MMMM dd, yyyy") : "Pilih tanggal"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {activitiesOnSelectedDate.length > 0 ? (
-                    activitiesOnSelectedDate.map((activity) => (
-                      <div key={activity.id} className="p-4 border rounded-lg space-y-2">
-                        <div className="flex justify-between items-start">
-                          <h3 className="font-semibold">{activity.nama}</h3>
-                          <Badge variant="default">
-                            {activity.jenis_giat}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{activity.tempat}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {format(parseISO(activity.waktu_mulai), "MMM dd")} -{" "}
-                          {format(parseISO(activity.waktu_selesai), "MMM dd, yyyy")}
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground text-center py-8">
-                      Tidak ada kegiatan pada tanggal ini
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardContent className="pt-6">
+              <MonthlyCalendar activities={activities} />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
