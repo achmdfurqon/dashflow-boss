@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Search, Calendar as CalendarIcon, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,15 +7,24 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { KegiatanForm } from "@/components/forms/KegiatanForm";
 import { supabase } from "@/integrations/supabase/client";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isWithinInterval } from "date-fns";
+import { id as localeId } from "date-fns/locale";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 
 export default function Kegiatan() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activities, setActivities] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
 
   useEffect(() => {
     fetchActivities();
@@ -39,9 +48,106 @@ export default function Kegiatan() {
     fetchActivities();
   };
 
-  const filteredActivities = activities.filter((activity) =>
-    activity.nama.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredActivities = activities.filter((activity) => {
+    const matchesSearch = activity.nama.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (!startDate || !endDate) return matchesSearch;
+    
+    const activityStart = parseISO(activity.waktu_mulai);
+    const activityEnd = parseISO(activity.waktu_selesai);
+    
+    const matchesDateRange = 
+      isWithinInterval(activityStart, { start: startDate, end: endDate }) ||
+      isWithinInterval(activityEnd, { start: startDate, end: endDate }) ||
+      (activityStart <= startDate && activityEnd >= endDate);
+    
+    return matchesSearch && matchesDateRange;
+  });
+
+  const downloadXLSX = () => {
+    if (filteredActivities.length === 0) {
+      toast({
+        title: "Tidak ada data",
+        description: "Tidak ada kegiatan untuk diunduh",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const data = filteredActivities.map((activity) => ({
+      "Nama Kegiatan": activity.nama,
+      "Jenis Kegiatan": activity.jenis_giat,
+      "Waktu Mulai": format(parseISO(activity.waktu_mulai), "dd MMM yyyy, HH:mm", { locale: localeId }),
+      "Waktu Selesai": format(parseISO(activity.waktu_selesai), "dd MMM yyyy, HH:mm", { locale: localeId }),
+      "Tempat": activity.tempat,
+      "Jenis Lokasi": activity.jenis_lokasi,
+      "Penyelenggara": activity.penyelenggara,
+      "Disposisi": activity.disposisi || "-",
+      "Agenda": activity.agenda || "-",
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Kegiatan");
+    
+    const fileName = `Rekap_Kegiatan_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    
+    toast({
+      title: "Berhasil",
+      description: `File ${fileName} berhasil diunduh`,
+    });
+  };
+
+  const downloadPDF = () => {
+    if (filteredActivities.length === 0) {
+      toast({
+        title: "Tidak ada data",
+        description: "Tidak ada kegiatan untuk diunduh",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const doc = new jsPDF();
+    
+    doc.setFontSize(16);
+    doc.text("Rekap Data Kegiatan", 14, 15);
+    
+    if (startDate && endDate) {
+      doc.setFontSize(10);
+      doc.text(
+        `Periode: ${format(startDate, "dd MMM yyyy", { locale: localeId })} - ${format(endDate, "dd MMM yyyy", { locale: localeId })}`,
+        14,
+        22
+      );
+    }
+
+    const tableData = filteredActivities.map((activity) => [
+      activity.nama,
+      activity.jenis_giat,
+      format(parseISO(activity.waktu_mulai), "dd MMM yyyy", { locale: localeId }),
+      format(parseISO(activity.waktu_selesai), "dd MMM yyyy", { locale: localeId }),
+      activity.tempat,
+      activity.penyelenggara,
+    ]);
+
+    autoTable(doc, {
+      startY: startDate && endDate ? 28 : 22,
+      head: [["Nama Kegiatan", "Jenis", "Mulai", "Selesai", "Tempat", "Penyelenggara"]],
+      body: tableData,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [66, 133, 244] },
+    });
+
+    const fileName = `Rekap_Kegiatan_${format(new Date(), "yyyy-MM-dd")}.pdf`;
+    doc.save(fileName);
+    
+    toast({
+      title: "Berhasil",
+      description: `File ${fileName} berhasil diunduh`,
+    });
+  };
 
   const activitiesOnSelectedDate = activities.filter((activity) => {
     if (!selectedDate) return false;
@@ -84,7 +190,7 @@ export default function Kegiatan() {
 
         <TabsContent value="list" className="space-y-6">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
@@ -93,6 +199,95 @@ export default function Kegiatan() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
                 />
+              </div>
+              
+              <div className="flex flex-wrap gap-3 items-center">
+                <div className="flex gap-2 items-center">
+                  <span className="text-sm text-muted-foreground">Filter Range:</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !startDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {startDate ? format(startDate, "dd MMM yyyy", { locale: localeId }) : "Tanggal Mulai"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
+                        onSelect={setStartDate}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  
+                  <span className="text-muted-foreground">-</span>
+                  
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !endDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {endDate ? format(endDate, "dd MMM yyyy", { locale: localeId }) : "Tanggal Selesai"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={endDate}
+                        onSelect={setEndDate}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  
+                  {(startDate || endDate) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setStartDate(undefined);
+                        setEndDate(undefined);
+                      }}
+                    >
+                      Reset
+                    </Button>
+                  )}
+                </div>
+                
+                <div className="flex gap-2 ml-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={downloadXLSX}
+                    className="gap-2"
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Unduh XLSX
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={downloadPDF}
+                    className="gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Unduh PDF
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
