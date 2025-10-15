@@ -18,8 +18,8 @@ import { cn } from "@/lib/utils";
 const kegiatanSchema = z.object({
   jenis_giat: z.string().min(1, "Activity type is required"),
   nama: z.string().min(1, "Activity name is required"),
-  waktu_mulai: z.date(),
-  waktu_selesai: z.date(),
+  waktu_mulai: z.date().optional(),
+  waktu_selesai: z.date().optional(),
   jenis_lokasi: z.enum(["kantor", "hotel", "virtual"]),
   tempat: z.string().min(1, "Location is required"),
   agenda: z.string().optional(),
@@ -49,6 +49,9 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<KegiatanFormData>({
     resolver: zodResolver(kegiatanSchema),
+    defaultValues: {
+      jenis_lokasi: "kantor"
+    }
   });
 
   useEffect(() => {
