@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { POKForm } from "@/components/forms/POKForm";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 export default function POK() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -49,6 +51,47 @@ export default function POK() {
     }).format(amount);
   };
 
+  const generateXLSX = () => {
+    if (filteredPOK.length === 0) {
+      toast.error("Tidak ada data POK untuk diunduh");
+      return;
+    }
+
+    const worksheetData = [
+      ["KODE", "URAIAN", "VOLUME", "SATUAN", "HARGA", "TOTAL", "VERSI", "TANGGAL VERSI"],
+      ...filteredPOK.map((pok) => [
+        pok.kode_akun,
+        `${pok.nama_akun} - ${pok.uraian}`,
+        pok.volume || "",
+        pok.satuan || "",
+        pok.harga ? Number(pok.harga) : "",
+        Number(pok.nilai_anggaran),
+        pok.versi || 1,
+        new Date(pok.tanggal_versi || pok.created_at).toLocaleDateString('id-ID')
+      ]),
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+    
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 15 }, // KODE
+      { wch: 50 }, // URAIAN
+      { wch: 15 }, // VOLUME
+      { wch: 10 }, // SATUAN
+      { wch: 15 }, // HARGA
+      { wch: 15 }, // TOTAL
+      { wch: 10 }, // VERSI
+      { wch: 15 }, // TANGGAL VERSI
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "POK");
+    XLSX.writeFile(wb, `POK_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    toast.success("File XLSX berhasil diunduh");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -56,20 +99,26 @@ export default function POK() {
           <h1 className="text-3xl font-bold">POK Management</h1>
           <p className="text-muted-foreground">Manajemen anggaran dan kode akun</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Tambah POK
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Buat POK Baru</DialogTitle>
-            </DialogHeader>
-            <POKForm onSuccess={handleSuccess} />
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={generateXLSX}>
+            <Download className="mr-2 h-4 w-4" />
+            Generate XLSX
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Tambah POK
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Buat POK Baru</DialogTitle>
+              </DialogHeader>
+              <POKForm onSuccess={handleSuccess} />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Card>
@@ -93,7 +142,7 @@ export default function POK() {
             <Card key={pok.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex justify-between items-start">
-                  <div>
+                  <div className="flex-1">
                     <CardTitle className="flex items-center gap-2">
                       <span className="text-sm font-mono">{pok.kode_akun}</span>
                       <span>-</span>
@@ -102,13 +151,32 @@ export default function POK() {
                     <p className="text-sm text-muted-foreground mt-1">{pok.uraian}</p>
                     <p className="text-xs text-muted-foreground mt-1">Jenis: {pok.jenis_akun}</p>
                   </div>
+                  <Badge variant="outline">v{pok.versi || 1}</Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Volume</p>
+                    <p className="font-medium">{pok.volume || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Satuan</p>
+                    <p className="font-medium">{pok.satuan || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Harga</p>
+                    <p className="font-medium">{pok.harga ? formatCurrency(Number(pok.harga)) : "-"}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Nilai Anggaran</p>
                     <p className="font-medium">{formatCurrency(Number(pok.nilai_anggaran))}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Tanggal Versi</p>
+                    <p className="font-medium">{new Date(pok.tanggal_versi || pok.created_at).toLocaleDateString('id-ID')}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Dibuat</p>

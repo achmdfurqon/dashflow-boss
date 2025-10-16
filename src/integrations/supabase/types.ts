@@ -311,36 +311,51 @@ export type Database = {
       pok: {
         Row: {
           created_at: string
+          harga: number | null
           id: string
           jenis_akun: string
           kode_akun: string
           nama_akun: string
           nilai_anggaran: number
+          satuan: string | null
+          tanggal_versi: string | null
           updated_at: string
           uraian: string
           user_id: string
+          versi: number | null
+          volume: string | null
         }
         Insert: {
           created_at?: string
+          harga?: number | null
           id?: string
           jenis_akun: string
           kode_akun: string
           nama_akun: string
           nilai_anggaran: number
+          satuan?: string | null
+          tanggal_versi?: string | null
           updated_at?: string
           uraian: string
           user_id: string
+          versi?: number | null
+          volume?: string | null
         }
         Update: {
           created_at?: string
+          harga?: number | null
           id?: string
           jenis_akun?: string
           kode_akun?: string
           nama_akun?: string
           nilai_anggaran?: number
+          satuan?: string | null
+          tanggal_versi?: string | null
           updated_at?: string
           uraian?: string
           user_id?: string
+          versi?: number | null
+          volume?: string | null
         }
         Relationships: []
       }
