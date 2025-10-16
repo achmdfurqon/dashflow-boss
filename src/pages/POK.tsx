@@ -18,6 +18,9 @@ export default function POK() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPOK, setEditingPOK] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState<number>(1);
+  const [versionDialogOpen, setVersionDialogOpen] = useState(false);
+  const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
 
   useEffect(() => {
     fetchPOKItems();
@@ -33,7 +36,18 @@ export default function POK() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (data) setPokItems(data);
+    if (data) {
+      setPokItems(data);
+      // Get the highest version
+      const maxVersion = data.reduce((max, item) => Math.max(max, item.versi || 1), 1);
+      setCurrentVersion(maxVersion);
+    }
+  };
+
+  const handleCreateNewVersion = () => {
+    const newVersion = currentVersion + 1;
+    setCurrentVersion(newVersion);
+    toast.success(`Versi POK ${newVersion} dibuat`);
   };
 
   const handleSuccess = () => {
@@ -77,15 +91,26 @@ export default function POK() {
     }).format(amount);
   };
 
+  const handleGenerateXLSX = () => {
+    setVersionDialogOpen(true);
+  };
+
   const generateXLSX = () => {
-    if (filteredPOK.length === 0) {
-      toast.error("Tidak ada data POK untuk diunduh");
+    if (selectedVersion === null) {
+      toast.error("Pilih versi POK terlebih dahulu");
+      return;
+    }
+
+    const versionPOK = pokItems.filter(item => item.versi === selectedVersion);
+    
+    if (versionPOK.length === 0) {
+      toast.error(`Tidak ada data POK untuk versi ${selectedVersion}`);
       return;
     }
 
     const worksheetData = [
       ["KODE", "URAIAN", "VOLUME", "SATUAN", "HARGA", "TOTAL", "VERSI", "TANGGAL VERSI"],
-      ...filteredPOK.map((pok) => [
+      ...versionPOK.map((pok) => [
         pok.kode_akun,
         `${pok.nama_akun} - ${pok.uraian}`,
         pok.volume || "",
@@ -113,10 +138,14 @@ export default function POK() {
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "POK");
-    XLSX.writeFile(wb, `POK_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, `POK_V${selectedVersion}_${new Date().toISOString().split('T')[0]}.xlsx`);
     
-    toast.success("File XLSX berhasil diunduh");
+    toast.success(`File XLSX Versi ${selectedVersion} berhasil diunduh`);
+    setVersionDialogOpen(false);
+    setSelectedVersion(null);
   };
+
+  const availableVersions = Array.from(new Set(pokItems.map(item => item.versi || 1))).sort((a, b) => b - a);
 
   return (
     <div className="space-y-6">
@@ -126,7 +155,11 @@ export default function POK() {
           <p className="text-muted-foreground">Manajemen anggaran dan kode akun</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={generateXLSX}>
+          <Button variant="secondary" onClick={handleCreateNewVersion}>
+            <Plus className="mr-2 h-4 w-4" />
+            Buat POK
+          </Button>
+          <Button variant="outline" onClick={handleGenerateXLSX}>
             <Download className="mr-2 h-4 w-4" />
             Generate XLSX
           </Button>
@@ -134,14 +167,14 @@ export default function POK() {
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
-                Tambah POK
+                Tambah Rincian
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Buat POK Baru</DialogTitle>
+                <DialogTitle>Tambah Rincian POK</DialogTitle>
               </DialogHeader>
-              <POKForm onSuccess={handleSuccess} />
+              <POKForm onSuccess={handleSuccess} currentVersion={currentVersion} />
             </DialogContent>
           </Dialog>
         </div>
@@ -259,6 +292,42 @@ export default function POK() {
             <DialogTitle>Edit POK</DialogTitle>
           </DialogHeader>
           <POKForm onSuccess={handleSuccess} editData={editingPOK} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={versionDialogOpen} onOpenChange={setVersionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Pilih Versi POK</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Pilih versi POK yang ingin diunduh:
+            </p>
+            <div className="grid gap-2">
+              {availableVersions.map((version) => (
+                <Button
+                  key={version}
+                  variant={selectedVersion === version ? "default" : "outline"}
+                  onClick={() => setSelectedVersion(version)}
+                  className="w-full justify-start"
+                >
+                  Versi {version}
+                </Button>
+              ))}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => {
+                setVersionDialogOpen(false);
+                setSelectedVersion(null);
+              }}>
+                Batal
+              </Button>
+              <Button onClick={generateXLSX} disabled={selectedVersion === null}>
+                Download XLSX
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

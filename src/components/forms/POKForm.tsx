@@ -25,9 +25,10 @@ type POKFormData = z.infer<typeof pokSchema>;
 interface POKFormProps {
   onSuccess: () => void;
   editData?: any;
+  currentVersion?: number;
 }
 
-export const POKForm = ({ onSuccess, editData }: POKFormProps) => {
+export const POKForm = ({ onSuccess, editData, currentVersion }: POKFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -61,6 +62,8 @@ export const POKForm = ({ onSuccess, editData }: POKFormProps) => {
         satuan: data.satuan || null,
         harga: data.harga ? parseFloat(data.harga) : null,
         nilai_anggaran: parseFloat(data.nilai_anggaran),
+        versi: editData ? editData.versi : currentVersion || 1,
+        tanggal_versi: editData ? editData.tanggal_versi : new Date().toISOString(),
       };
 
       if (editData) {
