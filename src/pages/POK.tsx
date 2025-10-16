@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Download } from "lucide-react";
+import { Plus, Search, Download, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { POKForm } from "@/components/forms/POKForm";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -15,6 +16,8 @@ export default function POK() {
   const [searchQuery, setSearchQuery] = useState("");
   const [pokItems, setPokItems] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingPOK, setEditingPOK] = useState<any>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchPOKItems();
@@ -35,7 +38,30 @@ export default function POK() {
 
   const handleSuccess = () => {
     setDialogOpen(false);
+    setEditDialogOpen(false);
+    setEditingPOK(null);
     fetchPOKItems();
+  };
+
+  const handleEdit = (pok: any) => {
+    setEditingPOK(pok);
+    setEditDialogOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("pok")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("POK berhasil dihapus");
+      fetchPOKItems();
+    } catch (error: any) {
+      toast.error("Gagal menghapus POK: " + error.message);
+    }
   };
 
   const filteredPOK = pokItems.filter((item) =>
@@ -151,7 +177,37 @@ export default function POK() {
                     <p className="text-sm text-muted-foreground mt-1">{pok.uraian}</p>
                     <p className="text-xs text-muted-foreground mt-1">Jenis: {pok.jenis_akun}</p>
                   </div>
-                  <Badge variant="outline">v{pok.versi || 1}</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">v{pok.versi || 1}</Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(pok)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Hapus POK?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Apakah Anda yakin ingin menghapus POK "{pok.nama_akun}"? Tindakan ini tidak dapat dibatalkan.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Batal</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDelete(pok.id)}>
+                            Hapus
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -196,6 +252,15 @@ export default function POK() {
           </Card>
         )}
       </div>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit POK</DialogTitle>
+          </DialogHeader>
+          <POKForm onSuccess={handleSuccess} editData={editingPOK} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

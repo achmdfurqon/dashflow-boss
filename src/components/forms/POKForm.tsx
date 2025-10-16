@@ -24,14 +24,25 @@ type POKFormData = z.infer<typeof pokSchema>;
 
 interface POKFormProps {
   onSuccess: () => void;
+  editData?: any;
 }
 
-export const POKForm = ({ onSuccess }: POKFormProps) => {
+export const POKForm = ({ onSuccess, editData }: POKFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<POKFormData>({
     resolver: zodResolver(pokSchema),
+    defaultValues: editData ? {
+      nama_akun: editData.nama_akun,
+      kode_akun: editData.kode_akun,
+      jenis_akun: editData.jenis_akun,
+      uraian: editData.uraian,
+      volume: editData.volume || "",
+      satuan: editData.satuan || "",
+      harga: editData.harga?.toString() || "",
+      nilai_anggaran: editData.nilai_anggaran?.toString() || "",
+    } : undefined,
   });
 
   const onSubmit = async (data: POKFormData) => {
@@ -40,7 +51,7 @@ export const POKForm = ({ onSuccess }: POKFormProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await (supabase as any).from("pok").insert({
+      const pokData = {
         user_id: user.id,
         nama_akun: data.nama_akun,
         kode_akun: data.kode_akun,
@@ -50,11 +61,25 @@ export const POKForm = ({ onSuccess }: POKFormProps) => {
         satuan: data.satuan || null,
         harga: data.harga ? parseFloat(data.harga) : null,
         nilai_anggaran: parseFloat(data.nilai_anggaran),
-      });
+      };
 
-      if (error) throw error;
+      if (editData) {
+        // Update existing POK
+        const { error } = await (supabase as any)
+          .from("pok")
+          .update(pokData)
+          .eq("id", editData.id);
 
-      toast({ title: "Success", description: "POK created successfully" });
+        if (error) throw error;
+        toast({ title: "Sukses", description: "POK berhasil diperbarui" });
+      } else {
+        // Create new POK
+        const { error } = await (supabase as any).from("pok").insert(pokData);
+
+        if (error) throw error;
+        toast({ title: "Sukses", description: "POK berhasil dibuat" });
+      }
+
       onSuccess();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -116,7 +141,7 @@ export const POKForm = ({ onSuccess }: POKFormProps) => {
       </div>
 
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Membuat..." : "Buat POK"}
+        {loading ? (editData ? "Memperbarui..." : "Membuat...") : (editData ? "Perbarui POK" : "Buat POK")}
       </Button>
     </form>
   );
