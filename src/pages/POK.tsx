@@ -253,12 +253,12 @@ export default function POK() {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <CardTitle className="flex items-center gap-2">
-                      <span className="text-sm font-mono">{pok.kode_akun}</span>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <span className="text-xs font-mono">{pok.kode_akun}</span>
                       <span>-</span>
-                      <span>{pok.nama_akun}</span>
+                      <span className="text-sm">{pok.nama_akun}</span>
                     </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">{pok.uraian}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{pok.uraian}</p>
                     <p className="text-xs text-muted-foreground mt-1">Jenis: {pok.jenis_akun}</p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -295,7 +295,7 @@ export default function POK() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-3 gap-4 text-xs">
                   <div>
                     <p className="text-muted-foreground">Volume</p>
                     <p className="font-medium">{pok.volume || "-"}</p>
@@ -309,7 +309,7 @@ export default function POK() {
                     <p className="font-medium">{pok.harga ? formatCurrency(Number(pok.harga)) : "-"}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-3 gap-4 text-xs">
                   <div>
                     <p className="text-muted-foreground">Nilai Anggaran</p>
                     <p className="font-medium">{formatCurrency(Number(pok.nilai_anggaran))}</p>
