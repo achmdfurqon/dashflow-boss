@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const pokSchema = z.object({
   nama_akun: z.string().min(1, "Nama akun wajib diisi"),
@@ -32,7 +33,7 @@ export const POKForm = ({ onSuccess, editData, currentVersion }: POKFormProps) =
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<POKFormData>({
+  const { register, handleSubmit, control, formState: { errors } } = useForm<POKFormData>({
     resolver: zodResolver(pokSchema),
     defaultValues: editData ? {
       nama_akun: editData.nama_akun,
@@ -95,7 +96,7 @@ export const POKForm = ({ onSuccess, editData, currentVersion }: POKFormProps) =
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="nama_akun">Nama Akun</Label>
-        <Input id="nama_akun" {...register("nama_akun")} placeholder="Enter account name" />
+        <Input id="nama_akun" {...register("nama_akun")} placeholder="Enter account name" className="text-sm" />
         {errors.nama_akun && <p className="text-sm text-destructive">{errors.nama_akun.message}</p>}
       </div>
 
@@ -107,7 +108,27 @@ export const POKForm = ({ onSuccess, editData, currentVersion }: POKFormProps) =
 
       <div className="space-y-2">
         <Label htmlFor="jenis_akun">Jenis Akun</Label>
-        <Input id="jenis_akun" {...register("jenis_akun")} placeholder="e.g., UP, TUP, LS, SPP, SPP2D" />
+        <Controller
+          name="jenis_akun"
+          control={control}
+          render={({ field }) => (
+            <Select onValueChange={field.onChange} value={field.value}>
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih jenis akun" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Belanja Bahan">Belanja Bahan</SelectItem>
+                <SelectItem value="Belanja Jasa Konsultan">Belanja Jasa Konsultan</SelectItem>
+                <SelectItem value="Belanja Jasa Profesi">Belanja Jasa Profesi</SelectItem>
+                <SelectItem value="Belanja Perjalanan Dinas Biasa">Belanja Perjalanan Dinas Biasa</SelectItem>
+                <SelectItem value="Belanja Perjalanan Dinas Dalam Kota">Belanja Perjalanan Dinas Dalam Kota</SelectItem>
+                <SelectItem value="Belanja Perjalanan Dinas Paket Meeting Dalam Kota">Belanja Perjalanan Dinas Paket Meeting Dalam Kota</SelectItem>
+                <SelectItem value="Belanja Modal Peralatan dan Mesin">Belanja Modal Peralatan dan Mesin</SelectItem>
+                <SelectItem value="Belanja Modal Lainnya">Belanja Modal Lainnya</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        />
         {errors.jenis_akun && <p className="text-sm text-destructive">{errors.jenis_akun.message}</p>}
       </div>
 
