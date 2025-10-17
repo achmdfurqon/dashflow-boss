@@ -271,8 +271,11 @@ export type Database = {
           id_pok: string | null
           metode_pencairan: string
           nilai_pencairan: number
+          riil_pencairan: number | null
           status_pencairan: string
           tgl_pencairan: string
+          tgl_sp2d: string | null
+          tgl_spp: string | null
           updated_at: string
           user_id: string
         }
@@ -282,8 +285,11 @@ export type Database = {
           id_pok?: string | null
           metode_pencairan: string
           nilai_pencairan: number
+          riil_pencairan?: number | null
           status_pencairan?: string
           tgl_pencairan: string
+          tgl_sp2d?: string | null
+          tgl_spp?: string | null
           updated_at?: string
           user_id: string
         }
@@ -293,8 +299,11 @@ export type Database = {
           id_pok?: string | null
           metode_pencairan?: string
           nilai_pencairan?: number
+          riil_pencairan?: number | null
           status_pencairan?: string
           tgl_pencairan?: string
+          tgl_sp2d?: string | null
+          tgl_spp?: string | null
           updated_at?: string
           user_id?: string
         }
