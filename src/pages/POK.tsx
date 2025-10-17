@@ -21,6 +21,7 @@ export default function POK() {
   const [currentVersion, setCurrentVersion] = useState<number>(1);
   const [versionDialogOpen, setVersionDialogOpen] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
+  const [compareDialogOpen, setCompareDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchPOKItems();
@@ -44,10 +45,47 @@ export default function POK() {
     }
   };
 
-  const handleCreateNewVersion = () => {
+  const handleCreateNewVersion = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
     const newVersion = currentVersion + 1;
+    
+    // Get all POK items from current version
+    const currentVersionItems = pokItems.filter(item => item.versi === currentVersion);
+    
+    if (currentVersionItems.length === 0) {
+      toast.error("Tidak ada data POK untuk diduplikat");
+      return;
+    }
+
+    // Duplicate all items with new version
+    const duplicatedItems = currentVersionItems.map(item => ({
+      user_id: user.id,
+      kode_akun: item.kode_akun,
+      nama_akun: item.nama_akun,
+      jenis_akun: item.jenis_akun,
+      uraian: item.uraian,
+      volume: item.volume,
+      satuan: item.satuan,
+      harga: item.harga,
+      nilai_anggaran: item.nilai_anggaran,
+      versi: newVersion,
+      tanggal_versi: new Date().toISOString()
+    }));
+
+    const { error } = await supabase
+      .from("pok")
+      .insert(duplicatedItems);
+
+    if (error) {
+      toast.error("Gagal membuat versi baru: " + error.message);
+      return;
+    }
+
     setCurrentVersion(newVersion);
-    toast.success(`Versi POK ${newVersion} dibuat`);
+    toast.success(`Versi POK ${newVersion} dibuat dengan ${duplicatedItems.length} item`);
+    fetchPOKItems();
   };
 
   const handleSuccess = () => {
@@ -146,6 +184,16 @@ export default function POK() {
   };
 
   const availableVersions = Array.from(new Set(pokItems.map(item => item.versi || 1))).sort((a, b) => b - a);
+  
+  const getComparisonData = () => {
+    const maxVersion = Math.max(...availableVersions);
+    const versions = {
+      v1: pokItems.filter(item => item.versi === 1),
+      vPrev: pokItems.filter(item => item.versi === maxVersion - 1),
+      vCurrent: pokItems.filter(item => item.versi === maxVersion)
+    };
+    return { versions, maxVersion };
+  };
 
   return (
     <div className="space-y-6">
@@ -158,6 +206,9 @@ export default function POK() {
           <Button variant="secondary" onClick={handleCreateNewVersion}>
             <Plus className="mr-2 h-4 w-4" />
             Buat POK
+          </Button>
+          <Button variant="outline" onClick={() => setCompareDialogOpen(true)}>
+            Bandingkan Versi
           </Button>
           <Button variant="outline" onClick={handleGenerateXLSX}>
             <Download className="mr-2 h-4 w-4" />
@@ -327,6 +378,89 @@ export default function POK() {
                 Download XLSX
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={compareDialogOpen} onOpenChange={setCompareDialogOpen}>
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Perbandingan Versi POK</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {(() => {
+              const { versions, maxVersion } = getComparisonData();
+              return (
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <h3 className="font-semibold mb-2">Versi 1</h3>
+                    <div className="space-y-2">
+                      {versions.v1.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Tidak ada data</p>
+                      ) : (
+                        versions.v1.map((pok) => (
+                          <Card key={pok.id}>
+                            <CardContent className="p-3">
+                              <p className="text-sm font-mono">{pok.kode_akun}</p>
+                              <p className="text-sm font-medium">{pok.nama_akun}</p>
+                              <p className="text-xs text-muted-foreground">{pok.uraian}</p>
+                              <p className="text-sm font-semibold mt-1">{formatCurrency(Number(pok.nilai_anggaran))}</p>
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
+                      <p className="text-sm font-semibold mt-2">
+                        Total: {formatCurrency(versions.v1.reduce((sum, pok) => sum + Number(pok.nilai_anggaran), 0))}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-2">Versi {maxVersion - 1}</h3>
+                    <div className="space-y-2">
+                      {versions.vPrev.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Tidak ada data</p>
+                      ) : (
+                        versions.vPrev.map((pok) => (
+                          <Card key={pok.id}>
+                            <CardContent className="p-3">
+                              <p className="text-sm font-mono">{pok.kode_akun}</p>
+                              <p className="text-sm font-medium">{pok.nama_akun}</p>
+                              <p className="text-xs text-muted-foreground">{pok.uraian}</p>
+                              <p className="text-sm font-semibold mt-1">{formatCurrency(Number(pok.nilai_anggaran))}</p>
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
+                      <p className="text-sm font-semibold mt-2">
+                        Total: {formatCurrency(versions.vPrev.reduce((sum, pok) => sum + Number(pok.nilai_anggaran), 0))}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-2">Versi {maxVersion}</h3>
+                    <div className="space-y-2">
+                      {versions.vCurrent.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Tidak ada data</p>
+                      ) : (
+                        versions.vCurrent.map((pok) => (
+                          <Card key={pok.id}>
+                            <CardContent className="p-3">
+                              <p className="text-sm font-mono">{pok.kode_akun}</p>
+                              <p className="text-sm font-medium">{pok.nama_akun}</p>
+                              <p className="text-xs text-muted-foreground">{pok.uraian}</p>
+                              <p className="text-sm font-semibold mt-1">{formatCurrency(Number(pok.nilai_anggaran))}</p>
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
+                      <p className="text-sm font-semibold mt-2">
+                        Total: {formatCurrency(versions.vCurrent.reduce((sum, pok) => sum + Number(pok.nilai_anggaran), 0))}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </DialogContent>
       </Dialog>
