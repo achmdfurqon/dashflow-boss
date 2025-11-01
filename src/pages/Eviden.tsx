@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Plus, Search, FileText, Image, File } from "lucide-react";
+import { useYearFilter } from "@/contexts/YearFilterContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ export default function Eviden() {
   const [searchQuery, setSearchQuery] = useState("");
   const [evidenItems, setEvidenItems] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { selectedYear } = useYearFilter();
 
   useEffect(() => {
     fetchEvidenItems();
@@ -36,9 +38,20 @@ export default function Eviden() {
     fetchEvidenItems();
   };
 
-  const filteredEviden = evidenItems.filter((item) =>
-    item.title?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredEviden = evidenItems.filter((item) => {
+    const matchesSearch = item.title?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Year filter
+    if (selectedYear) {
+      if (item.tahun && item.tahun !== selectedYear) return false;
+      if (!item.tahun) {
+        const itemYear = new Date(item.created_at).getFullYear();
+        if (itemYear !== selectedYear) return false;
+      }
+    }
+    
+    return matchesSearch;
+  });
 
   const getDocIcon = (type: string) => {
     switch (type) {

@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
+import { YearFilterProvider } from "@/contexts/YearFilterContext";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Kegiatan from "./pages/Kegiatan";
@@ -51,15 +52,17 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
-          <Route path="/kegiatan" element={<ProtectedRoute><DashboardLayout><Kegiatan /></DashboardLayout></ProtectedRoute>} />
-          <Route path="/pok" element={<ProtectedRoute><DashboardLayout><POK /></DashboardLayout></ProtectedRoute>} />
-          <Route path="/pencairan" element={<ProtectedRoute><DashboardLayout><Pencairan /></DashboardLayout></ProtectedRoute>} />
-          <Route path="/eviden" element={<ProtectedRoute><DashboardLayout><Eviden /></DashboardLayout></ProtectedRoute>} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <YearFilterProvider>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/kegiatan" element={<ProtectedRoute><DashboardLayout><Kegiatan /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/pok" element={<ProtectedRoute><DashboardLayout><POK /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/pencairan" element={<ProtectedRoute><DashboardLayout><Pencairan /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/eviden" element={<ProtectedRoute><DashboardLayout><Eviden /></DashboardLayout></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </YearFilterProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

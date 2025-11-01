@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Plus, Search, Calendar as CalendarIcon, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { useYearFilter } from "@/contexts/YearFilterContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +27,7 @@ export default function Kegiatan() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
+  const { selectedYear } = useYearFilter();
 
   useEffect(() => {
     fetchActivities();
@@ -51,6 +53,12 @@ export default function Kegiatan() {
 
   const filteredActivities = activities.filter((activity) => {
     const matchesSearch = activity.nama.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Year filter
+    if (selectedYear) {
+      const activityYear = new Date(activity.waktu_mulai).getFullYear();
+      if (activityYear !== selectedYear) return false;
+    }
     
     if (!startDate || !endDate) return matchesSearch;
     

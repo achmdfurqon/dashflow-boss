@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Plus, Search, Download, Pencil, Trash2 } from "lucide-react";
+import { useYearFilter } from "@/contexts/YearFilterContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,7 @@ export default function POK() {
   const [versionDialogOpen, setVersionDialogOpen] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const [compareDialogOpen, setCompareDialogOpen] = useState(false);
+  const { selectedYear } = useYearFilter();
 
   useEffect(() => {
     fetchPOKItems();
@@ -116,11 +118,20 @@ export default function POK() {
     }
   };
 
-  const filteredPOK = pokItems.filter((item) =>
-    item.kode_akun.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.nama_akun.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.uraian.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPOK = pokItems.filter((item) => {
+    const matchesSearch = 
+      item.kode_akun.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.nama_akun.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.uraian.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Year filter
+    if (selectedYear) {
+      const itemYear = new Date(item.tanggal_versi || item.created_at).getFullYear();
+      if (itemYear !== selectedYear) return false;
+    }
+    
+    return matchesSearch;
+  });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {

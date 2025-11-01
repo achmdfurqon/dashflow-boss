@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Plus, Search, Download } from "lucide-react";
+import { useYearFilter } from "@/contexts/YearFilterContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,7 @@ export default function Pencairan() {
   const [searchQuery, setSearchQuery] = useState("");
   const [pencairanItems, setPencairanItems] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { selectedYear } = useYearFilter();
 
   useEffect(() => {
     fetchPencairanItems();
@@ -46,10 +48,19 @@ export default function Pencairan() {
     }).format(amount);
   };
 
-  const filteredPencairan = pencairanItems.filter((item) =>
-    item.metode_pencairan?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    formatCurrency(Number(item.nilai_pencairan)).toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPencairan = pencairanItems.filter((item) => {
+    const matchesSearch = 
+      item.metode_pencairan?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      formatCurrency(Number(item.nilai_pencairan)).toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Year filter
+    if (selectedYear) {
+      const itemYear = new Date(item.tgl_spp || item.tgl_sp2d || item.tgl_pencairan || item.created_at).getFullYear();
+      if (itemYear !== selectedYear) return false;
+    }
+    
+    return matchesSearch;
+  });
 
   const getStatusVariant = (status: string) => {
     switch (status) {
