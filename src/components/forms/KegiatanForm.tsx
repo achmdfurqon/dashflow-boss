@@ -11,12 +11,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { CalendarIcon, Settings } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { ManageDisposisi } from "./ManageDisposisi";
 
 const kegiatanSchema = z.object({
-  jenis_giat: z.string().min(1, "Activity type is required"),
+  jenis_giat: z.enum(["Internal", "Eksternal"], { required_error: "Jenis kegiatan harus dipilih" }),
   nama: z.string().min(1, "Activity name is required"),
   waktu_mulai: z.date().optional(),
   waktu_selesai: z.date().optional(),
@@ -26,7 +29,7 @@ const kegiatanSchema = z.object({
   penyelenggara: z.string().min(1, "Organizer is required"),
   no_surat: z.string().optional(),
   tgl_surat: z.date().optional(),
-  disposisi: z.string().optional(),
+  disposisi: z.array(z.string()).optional(),
   id_giat_sblm: z.string().optional(),
   id_pok: z.string().optional(),
 });
@@ -46,8 +49,11 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
   const [endTime, setEndTime] = useState("17:00");
   const [suratDate, setSuratDate] = useState<Date>();
   const [jenisLokasi, setJenisLokasi] = useState<string>("kantor");
+  const [jenisGiat, setJenisGiat] = useState<string>("");
   const [pokList, setPokList] = useState<any[]>([]);
   const [kegiatanList, setKegiatanList] = useState<any[]>([]);
+  const [disposisiList, setDisposisiList] = useState<any[]>([]);
+  const [selectedDisposisi, setSelectedDisposisi] = useState<string[]>([]);
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<KegiatanFormData>({
     resolver: zodResolver(kegiatanSchema),
@@ -59,18 +65,36 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
   useEffect(() => {
     fetchPokList();
     fetchKegiatanList();
+    fetchDisposisiList();
   }, []);
+
+  const fetchDisposisiList = async () => {
+    const { data } = await supabase.from("ref_disposisi").select("*");
+    if (data) setDisposisiList(data);
+  };
 
   const fetchPokList = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Get latest version for each POK
     const { data } = await supabase
       .from("pok")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .order("tanggal_versi", { ascending: false });
     
-    if (data) setPokList(data);
+    if (data) {
+      // Group by kode_akun and get only the latest version
+      const latestPokMap = new Map();
+      data.forEach(pok => {
+        const existing = latestPokMap.get(pok.kode_akun);
+        if (!existing || pok.versi > existing.versi) {
+          latestPokMap.set(pok.kode_akun, pok);
+        }
+      });
+      setPokList(Array.from(latestPokMap.values()));
+    }
   };
 
   const fetchKegiatanList = async () => {
@@ -111,7 +135,6 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
       waktuSelesai.setHours(endHour, endMinute, 0, 0);
 
       const { error } = await supabase.from("kegiatan").insert({
-        user_id: user.id,
         jenis_giat: data.jenis_giat,
         nama: data.nama,
         waktu_mulai: waktuMulai.toISOString(),
@@ -122,10 +145,10 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
         penyelenggara: data.penyelenggara,
         no_surat: data.no_surat || null,
         tgl_surat: suratDate ? format(suratDate, "yyyy-MM-dd") : null,
-        disposisi: data.disposisi || null,
+        disposisi: selectedDisposisi.length > 0 ? selectedDisposisi : null,
         id_giat_sblm: data.id_giat_sblm || null,
         id_pok: data.id_pok || null,
-      });
+      } as any);
 
       if (error) throw error;
 
@@ -142,7 +165,18 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="jenis_giat">Jenis Kegiatan</Label>
-        <Input id="jenis_giat" {...register("jenis_giat")} placeholder="e.g., Internal, Eksternal" />
+        <Select value={jenisGiat} onValueChange={(value) => {
+          setJenisGiat(value);
+          setValue("jenis_giat", value as any);
+        }}>
+          <SelectTrigger>
+            <SelectValue placeholder="Pilih jenis kegiatan" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Internal">Internal</SelectItem>
+            <SelectItem value="Eksternal">Eksternal</SelectItem>
+          </SelectContent>
+        </Select>
         {errors.jenis_giat && <p className="text-sm text-destructive">{errors.jenis_giat.message}</p>}
       </div>
 
@@ -270,8 +304,51 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="disposisi">Disposisi (optional)</Label>
-        <Textarea id="disposisi" {...register("disposisi")} placeholder="Enter disposition" />
+        <div className="flex justify-between items-center">
+          <Label>Disposisi (optional)</Label>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button type="button" variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-2" />
+                Kelola
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Kelola Disposisi</DialogTitle>
+              </DialogHeader>
+              <ManageDisposisi onUpdate={fetchDisposisiList} />
+            </DialogContent>
+          </Dialog>
+        </div>
+        <div className="border rounded-md p-4 space-y-2 max-h-[200px] overflow-y-auto">
+          {disposisiList.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Belum ada disposisi. Klik "Kelola" untuk menambahkan.</p>
+          ) : (
+            disposisiList.map((item) => (
+              <div key={item.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`disposisi-${item.id}`}
+                  checked={selectedDisposisi.includes(item.nama_disposisi)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      const newSelected = [...selectedDisposisi, item.nama_disposisi];
+                      setSelectedDisposisi(newSelected);
+                      setValue("disposisi", newSelected);
+                    } else {
+                      const newSelected = selectedDisposisi.filter((d) => d !== item.nama_disposisi);
+                      setSelectedDisposisi(newSelected);
+                      setValue("disposisi", newSelected);
+                    }
+                  }}
+                />
+                <Label htmlFor={`disposisi-${item.id}`} className="font-normal cursor-pointer">
+                  {item.nama_disposisi}
+                </Label>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -290,21 +367,23 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="id_pok">POK (optional)</Label>
-        <Select onValueChange={(value) => setValue("id_pok", value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select POK" />
-          </SelectTrigger>
-          <SelectContent>
-            {pokList.map((pok) => (
-              <SelectItem key={pok.id} value={pok.id}>
-                {pok.kode_akun} - {pok.nama_akun}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {jenisGiat === "Internal" && (
+        <div className="space-y-2">
+          <Label htmlFor="id_pok">POK (optional)</Label>
+          <Select onValueChange={(value) => setValue("id_pok", value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select POK" />
+            </SelectTrigger>
+            <SelectContent>
+              {pokList.map((pok) => (
+                <SelectItem key={pok.id} value={pok.id}>
+                  {pok.kode_akun} - {pok.nama_akun}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Creating..." : "Create Activity"}

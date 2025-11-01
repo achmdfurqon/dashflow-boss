@@ -91,7 +91,7 @@ export default function Kegiatan() {
       "Tempat": activity.tempat,
       "Jenis Lokasi": activity.jenis_lokasi,
       "Penyelenggara": activity.penyelenggara,
-      "Disposisi": activity.disposisi || "-",
+      "Disposisi": activity.disposisi && activity.disposisi.length > 0 ? activity.disposisi.join(", ") : "-",
       "Agenda": activity.agenda || "-",
     }));
 
@@ -333,6 +333,18 @@ export default function Kegiatan() {
                       <p className="font-medium capitalize">{activity.jenis_lokasi}</p>
                     </div>
                   </div>
+                  {activity.disposisi && activity.disposisi.length > 0 && (
+                    <div className="mt-4 pt-4 border-t">
+                      <p className="text-xs text-muted-foreground mb-2">Disposisi:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {activity.disposisi.map((d: string, idx: number) => (
+                          <Badge key={idx} variant="outline" className="text-xs">
+                            {d}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}

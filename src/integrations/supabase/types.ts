@@ -127,7 +127,7 @@ export type Database = {
         Row: {
           agenda: string | null
           created_at: string
-          disposisi: string | null
+          disposisi: string[] | null
           id: string
           id_giat_sblm: string | null
           id_pok: string | null
@@ -146,7 +146,7 @@ export type Database = {
         Insert: {
           agenda?: string | null
           created_at?: string
-          disposisi?: string | null
+          disposisi?: string[] | null
           id?: string
           id_giat_sblm?: string | null
           id_pok?: string | null
@@ -165,7 +165,7 @@ export type Database = {
         Update: {
           agenda?: string | null
           created_at?: string
-          disposisi?: string | null
+          disposisi?: string[] | null
           id?: string
           id_giat_sblm?: string | null
           id_pok?: string | null
@@ -365,6 +365,24 @@ export type Database = {
           user_id?: string
           versi?: number | null
           volume?: string | null
+        }
+        Relationships: []
+      }
+      ref_disposisi: {
+        Row: {
+          created_at: string
+          id: string
+          nama_disposisi: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nama_disposisi: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nama_disposisi?: string
         }
         Relationships: []
       }
