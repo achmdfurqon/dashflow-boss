@@ -8,12 +8,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { YearFilterProvider } from "@/contexts/YearFilterContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Kegiatan from "./pages/Kegiatan";
 import POK from "./pages/POK";
 import Pencairan from "./pages/Pencairan";
 import Eviden from "./pages/Eviden";
+import Akun from "./pages/Akun";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,17 +54,20 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <YearFilterProvider>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/kegiatan" element={<ProtectedRoute><DashboardLayout><Kegiatan /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/pok" element={<ProtectedRoute><DashboardLayout><POK /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/pencairan" element={<ProtectedRoute><DashboardLayout><Pencairan /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/eviden" element={<ProtectedRoute><DashboardLayout><Eviden /></DashboardLayout></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </YearFilterProvider>
+        <AuthProvider>
+          <YearFilterProvider>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/kegiatan" element={<ProtectedRoute><DashboardLayout><Kegiatan /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/pok" element={<ProtectedRoute><DashboardLayout><POK /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/pencairan" element={<ProtectedRoute><DashboardLayout><Pencairan /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/eviden" element={<ProtectedRoute><DashboardLayout><Eviden /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/akun" element={<ProtectedRoute><DashboardLayout><Akun /></DashboardLayout></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </YearFilterProvider>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
