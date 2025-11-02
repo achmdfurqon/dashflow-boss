@@ -38,9 +38,10 @@ type KegiatanFormData = z.infer<typeof kegiatanSchema>;
 
 interface KegiatanFormProps {
   onSuccess: () => void;
+  initialData?: any;
 }
 
-export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
+export const KegiatanForm = ({ onSuccess, initialData }: KegiatanFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState<Date>();
@@ -66,7 +67,42 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
     fetchPokList();
     fetchKegiatanList();
     fetchDisposisiList();
-  }, []);
+    
+    if (initialData) {
+      setValue("jenis_giat", initialData.jenis_giat);
+      setValue("nama", initialData.nama);
+      setValue("jenis_lokasi", initialData.jenis_lokasi);
+      setValue("tempat", initialData.tempat);
+      setValue("agenda", initialData.agenda);
+      setValue("penyelenggara", initialData.penyelenggara);
+      setValue("no_surat", initialData.no_surat);
+      setValue("id_giat_sblm", initialData.id_giat_sblm);
+      setValue("id_pok", initialData.id_pok);
+      
+      setJenisGiat(initialData.jenis_giat);
+      setJenisLokasi(initialData.jenis_lokasi);
+      
+      if (initialData.waktu_mulai) {
+        const start = new Date(initialData.waktu_mulai);
+        setStartDate(start);
+        setStartTime(`${start.getHours().toString().padStart(2, '0')}:${start.getMinutes().toString().padStart(2, '0')}`);
+      }
+      
+      if (initialData.waktu_selesai) {
+        const end = new Date(initialData.waktu_selesai);
+        setEndDate(end);
+        setEndTime(`${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`);
+      }
+      
+      if (initialData.tgl_surat) {
+        setSuratDate(new Date(initialData.tgl_surat));
+      }
+      
+      if (initialData.disposisi) {
+        setSelectedDisposisi(initialData.disposisi);
+      }
+    }
+  }, [initialData]);
 
   const fetchDisposisiList = async () => {
     const { data } = await supabase.from("ref_disposisi").select("*");
@@ -134,7 +170,7 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
       const waktuSelesai = new Date(endDate);
       waktuSelesai.setHours(endHour, endMinute, 0, 0);
 
-      const { error } = await supabase.from("kegiatan").insert({
+      const payload = {
         jenis_giat: data.jenis_giat,
         nama: data.nama,
         waktu_mulai: waktuMulai.toISOString(),
@@ -148,11 +184,26 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
         disposisi: selectedDisposisi.length > 0 ? selectedDisposisi : null,
         id_giat_sblm: data.id_giat_sblm || null,
         id_pok: data.id_pok || null,
-      } as any);
+      };
+
+      let error;
+      if (initialData) {
+        const result = await supabase
+          .from("kegiatan")
+          .update(payload as any)
+          .eq("id", initialData.id);
+        error = result.error;
+      } else {
+        const result = await supabase.from("kegiatan").insert(payload as any);
+        error = result.error;
+      }
 
       if (error) throw error;
 
-      toast({ title: "Success", description: "Activity created successfully" });
+      toast({ 
+        title: "Berhasil", 
+        description: initialData ? "Kegiatan berhasil diubah" : "Kegiatan berhasil dibuat" 
+      });
       onSuccess();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -386,7 +437,7 @@ export const KegiatanForm = ({ onSuccess }: KegiatanFormProps) => {
       )}
 
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Creating..." : "Create Activity"}
+        {loading ? (initialData ? "Updating..." : "Creating...") : (initialData ? "Update Activity" : "Create Activity")}
       </Button>
     </form>
   );

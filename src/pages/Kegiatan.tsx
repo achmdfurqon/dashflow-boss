@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Calendar as CalendarIcon, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Plus, Search, Calendar as CalendarIcon, Download, FileSpreadsheet, FileText, Pencil, Trash2 } from "lucide-react";
 import { useYearFilter } from "@/contexts/YearFilterContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -28,6 +29,9 @@ export default function Kegiatan() {
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const { selectedYear } = useYearFilter();
+  const [editingActivity, setEditingActivity] = useState<any | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [activityToDelete, setActivityToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchActivities();
@@ -48,7 +52,29 @@ export default function Kegiatan() {
 
   const handleSuccess = () => {
     setDialogOpen(false);
+    setEditingActivity(null);
     fetchActivities();
+  };
+
+  const handleDelete = async () => {
+    if (!activityToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("kegiatan")
+        .delete()
+        .eq("id", activityToDelete);
+
+      if (error) throw error;
+
+      toast({ title: "Berhasil", description: "Kegiatan berhasil dihapus" });
+      fetchActivities();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setDeleteDialogOpen(false);
+      setActivityToDelete(null);
+    }
   };
 
   const filteredActivities = activities.filter((activity) => {
@@ -172,7 +198,10 @@ export default function Kegiatan() {
           <h1 className="text-3xl font-bold">Kegiatan</h1>
           <p className="text-muted-foreground">Kelola data kegiatan internal dan eksternal</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditingActivity(null);
+        }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -181,14 +210,29 @@ export default function Kegiatan() {
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Buat Kegiatan Baru</DialogTitle>
+              <DialogTitle>{editingActivity ? "Edit Kegiatan" : "Buat Kegiatan Baru"}</DialogTitle>
               <DialogDescription>
-                Isi form di bawah untuk membuat kegiatan baru
+                {editingActivity ? "Edit data kegiatan" : "Isi form di bawah untuk membuat kegiatan baru"}
               </DialogDescription>
             </DialogHeader>
-            <KegiatanForm onSuccess={handleSuccess} />
+            <KegiatanForm onSuccess={handleSuccess} initialData={editingActivity} />
           </DialogContent>
         </Dialog>
+        
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hapus Kegiatan</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus kegiatan ini? Tindakan ini tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete}>Hapus</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <Tabs defaultValue="list" className="w-full">
@@ -306,16 +350,38 @@ export default function Kegiatan() {
               <Card key={activity.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <div>
+                    <div className="flex-1">
                       <CardTitle>{activity.nama}</CardTitle>
                       <p className="text-sm text-muted-foreground mt-1">
                         {format(parseISO(activity.waktu_mulai), "MMM dd, yyyy")} -{" "}
                         {format(parseISO(activity.waktu_selesai), "MMM dd, yyyy")}
                       </p>
                     </div>
-                    <Badge variant="default">
-                      {activity.jenis_giat}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="default">
+                        {activity.jenis_giat}
+                      </Badge>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditingActivity(activity);
+                          setDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setActivityToDelete(activity.id);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>

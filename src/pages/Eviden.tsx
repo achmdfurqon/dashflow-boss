@@ -1,20 +1,26 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, FileText, Image, File } from "lucide-react";
+import { Plus, Search, FileText, Image, File, Pencil, Trash2 } from "lucide-react";
 import { useYearFilter } from "@/contexts/YearFilterContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 import { EvidenForm } from "@/components/forms/EvidenForm";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 
 export default function Eviden() {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [evidenItems, setEvidenItems] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { selectedYear } = useYearFilter();
+  const [editingEviden, setEditingEviden] = useState<any | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [evidenToDelete, setEvidenToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEvidenItems();
@@ -35,7 +41,29 @@ export default function Eviden() {
 
   const handleSuccess = () => {
     setDialogOpen(false);
+    setEditingEviden(null);
     fetchEvidenItems();
+  };
+
+  const handleDelete = async () => {
+    if (!evidenToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("eviden")
+        .delete()
+        .eq("id", evidenToDelete);
+
+      if (error) throw error;
+
+      toast({ title: "Berhasil", description: "Eviden berhasil dihapus" });
+      fetchEvidenItems();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setDeleteDialogOpen(false);
+      setEvidenToDelete(null);
+    }
   };
 
   const filteredEviden = evidenItems.filter((item) => {
@@ -71,7 +99,10 @@ export default function Eviden() {
           <h1 className="text-3xl font-bold">Eviden</h1>
           <p className="text-muted-foreground">Kelola dokumen dan bukti kegiatan</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditingEviden(null);
+        }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -80,11 +111,26 @@ export default function Eviden() {
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Tambah Dokumen Eviden</DialogTitle>
+              <DialogTitle>{editingEviden ? "Edit Dokumen Eviden" : "Tambah Dokumen Eviden"}</DialogTitle>
             </DialogHeader>
-            <EvidenForm onSuccess={handleSuccess} />
+            <EvidenForm onSuccess={handleSuccess} initialData={editingEviden} />
           </DialogContent>
         </Dialog>
+        
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hapus Eviden</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus eviden ini? Tindakan ini tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete}>Hapus</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <Card>
@@ -114,6 +160,28 @@ export default function Eviden() {
                   <p className="text-sm text-muted-foreground mt-1">
                     {item.tahun || "Tanpa tahun"}
                   </p>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      setEditingEviden(item);
+                      setDialogOpen(true);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      setEvidenToDelete(item.id);
+                      setDeleteDialogOpen(true);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </CardHeader>

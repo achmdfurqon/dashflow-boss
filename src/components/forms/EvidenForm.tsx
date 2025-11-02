@@ -28,9 +28,10 @@ type EvidenFormData = z.infer<typeof evidenSchema>;
 
 interface EvidenFormProps {
   onSuccess: () => void;
+  initialData?: any;
 }
 
-export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
+export const EvidenForm = ({ onSuccess, initialData }: EvidenFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [kegiatanList, setKegiatanList] = useState<any[]>([]);
@@ -47,7 +48,22 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
     fetchKegiatanList();
     fetchRefEvidenList();
     fetchPokList();
-  }, []);
+    
+    if (initialData) {
+      setValue("title", initialData.title);
+      setValue("tipe_eviden", initialData.tipe_eviden);
+      setValue("id_ref_eviden", initialData.id_ref_eviden);
+      setValue("file_eviden", initialData.file_eviden);
+      setValue("deskripsi", initialData.deskripsi);
+      setValue("id_pok", initialData.id_pok);
+      setValue("id_giat", initialData.id_giat);
+      setValue("tahun", initialData.tahun?.toString());
+      
+      if (initialData.id_pok) {
+        setSelectedPok(initialData.id_pok);
+      }
+    }
+  }, [initialData]);
 
   useEffect(() => {
     if (selectedPok) {
@@ -98,8 +114,7 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await (supabase as any).from("eviden").insert({
-        user_id: user.id,
+      const payload = {
         title: data.title,
         tipe_eviden: data.tipe_eviden,
         id_ref_eviden: data.id_ref_eviden,
@@ -108,11 +123,29 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
         id_pok: data.id_pok || null,
         id_giat: data.id_giat || null,
         tahun: data.tahun ? parseInt(data.tahun) : null,
-      });
+      };
+
+      let error;
+      if (initialData) {
+        const result = await (supabase as any)
+          .from("eviden")
+          .update(payload)
+          .eq("id", initialData.id);
+        error = result.error;
+      } else {
+        const result = await (supabase as any).from("eviden").insert({
+          ...payload,
+          user_id: user.id,
+        });
+        error = result.error;
+      }
 
       if (error) throw error;
 
-      toast({ title: "Success", description: "Evidence created successfully" });
+      toast({ 
+        title: "Berhasil", 
+        description: initialData ? "Eviden berhasil diubah" : "Eviden berhasil dibuat" 
+      });
       onSuccess();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -234,7 +267,7 @@ export const EvidenForm = ({ onSuccess }: EvidenFormProps) => {
       </div>
 
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Menyimpan..." : "Simpan Eviden"}
+        {loading ? "Menyimpan..." : (initialData ? "Update Eviden" : "Simpan Eviden")}
       </Button>
     </form>
   );

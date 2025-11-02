@@ -33,9 +33,10 @@ type PencairanFormData = z.infer<typeof pencairanSchema>;
 
 interface PencairanFormProps {
   onSuccess: () => void;
+  initialData?: any;
 }
 
-export const PencairanForm = ({ onSuccess }: PencairanFormProps) => {
+export const PencairanForm = ({ onSuccess, initialData }: PencairanFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [tglSpp, setTglSpp] = useState<Date | undefined>();
@@ -55,7 +56,28 @@ export const PencairanForm = ({ onSuccess }: PencairanFormProps) => {
 
   useEffect(() => {
     fetchPOKList();
-  }, []);
+    
+    if (initialData) {
+      setValue("id_pok", initialData.id_pok);
+      setValue("nilai_pencairan", initialData.nilai_pencairan?.toString());
+      setValue("riil_pencairan", initialData.riil_pencairan?.toString());
+      setValue("metode_pencairan", initialData.metode_pencairan);
+      setValue("status_pencairan", initialData.status_pencairan);
+      
+      setMetodePencairan(initialData.metode_pencairan || "UP");
+      setStatusPencairan(initialData.status_pencairan || "SPP");
+      
+      if (initialData.tgl_spp) {
+        setTglSpp(new Date(initialData.tgl_spp));
+      }
+      if (initialData.tgl_sp2d) {
+        setTglSp2d(new Date(initialData.tgl_sp2d));
+      }
+      if (initialData.riil_pencairan) {
+        setShowRiilPencairan(true);
+      }
+    }
+  }, [initialData]);
 
   const fetchPOKList = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -114,11 +136,24 @@ export const PencairanForm = ({ onSuccess }: PencairanFormProps) => {
         insertData.tgl_pencairan = format(tglSp2d, "yyyy-MM-dd");
       }
 
-      const { error } = await (supabase as any).from("pencairan").insert(insertData);
+      let error;
+      if (initialData) {
+        const result = await (supabase as any)
+          .from("pencairan")
+          .update(insertData)
+          .eq("id", initialData.id);
+        error = result.error;
+      } else {
+        const result = await (supabase as any).from("pencairan").insert(insertData);
+        error = result.error;
+      }
 
       if (error) throw error;
 
-      toast({ title: "Success", description: "Disbursement created successfully" });
+      toast({ 
+        title: "Berhasil", 
+        description: initialData ? "Pencairan berhasil diubah" : "Pencairan berhasil dibuat" 
+      });
       onSuccess();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -247,7 +282,7 @@ export const PencairanForm = ({ onSuccess }: PencairanFormProps) => {
       </div>
 
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Creating..." : "Create Disbursement"}
+        {loading ? (initialData ? "Updating..." : "Creating...") : (initialData ? "Update Disbursement" : "Create Disbursement")}
       </Button>
     </form>
   );

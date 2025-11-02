@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Download } from "lucide-react";
+import { Plus, Search, Download, Pencil, Trash2 } from "lucide-react";
 import { useYearFilter } from "@/contexts/YearFilterContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PencairanForm } from "@/components/forms/PencairanForm";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
@@ -18,6 +19,9 @@ export default function Pencairan() {
   const [pencairanItems, setPencairanItems] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { selectedYear } = useYearFilter();
+  const [editingPencairan, setEditingPencairan] = useState<any | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pencairanToDelete, setPencairanToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPencairanItems();
@@ -38,7 +42,29 @@ export default function Pencairan() {
 
   const handleSuccess = () => {
     setDialogOpen(false);
+    setEditingPencairan(null);
     fetchPencairanItems();
+  };
+
+  const handleDelete = async () => {
+    if (!pencairanToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("pencairan")
+        .delete()
+        .eq("id", pencairanToDelete);
+
+      if (error) throw error;
+
+      toast({ title: "Berhasil", description: "Pencairan berhasil dihapus" });
+      fetchPencairanItems();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setDeleteDialogOpen(false);
+      setPencairanToDelete(null);
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -174,7 +200,10 @@ export default function Pencairan() {
             <Download className="mr-2 h-4 w-4" />
             Rekap Pencairan
           </Button>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) setEditingPencairan(null);
+          }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
@@ -183,11 +212,26 @@ export default function Pencairan() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Buat Permintaan Pencairan</DialogTitle>
+                <DialogTitle>{editingPencairan ? "Edit Pencairan" : "Buat Permintaan Pencairan"}</DialogTitle>
               </DialogHeader>
-              <PencairanForm onSuccess={handleSuccess} />
+              <PencairanForm onSuccess={handleSuccess} initialData={editingPencairan} />
             </DialogContent>
           </Dialog>
+          
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Hapus Pencairan</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Apakah Anda yakin ingin menghapus pencairan ini? Tindakan ini tidak dapat dibatalkan.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Batal</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete}>Hapus</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 
@@ -210,13 +254,35 @@ export default function Pencairan() {
           <Card key={item.id} className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="flex justify-between items-start">
-                <div>
+                <div className="flex-1">
                   <CardTitle>{item.metode_pencairan}</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
                     {format(parseISO(item.tgl_pencairan), "dd MMMM yyyy")}
                   </p>
                 </div>
-                <Badge variant={getStatusVariant(item.status_pencairan)}>{item.status_pencairan}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={getStatusVariant(item.status_pencairan)}>{item.status_pencairan}</Badge>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      setEditingPencairan(item);
+                      setDialogOpen(true);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      setPencairanToDelete(item.id);
+                      setDeleteDialogOpen(true);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
