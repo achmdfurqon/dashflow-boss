@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, UserPlus, Shield } from "lucide-react";
+import { Search, UserPlus, Shield, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +42,14 @@ export default function Akun() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [newRole, setNewRole] = useState<UserRole>("staf_biasa");
+  const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserFullName, setNewUserFullName] = useState("");
+  const [newUserRole, setNewUserRole] = useState<UserRole>("staf_biasa");
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserWithRole | null>(null);
 
   useEffect(() => {
     // Check if user has admin role
@@ -125,6 +133,109 @@ export default function Akun() {
     }
   };
 
+  const handleCreateUser = async () => {
+    if (!newUserEmail || !newUserPassword || !newUserRole) {
+      toast({
+        title: "Error",
+        description: "Email, password, dan role harus diisi",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCreatingUser(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: newUserEmail,
+            password: newUserPassword,
+            full_name: newUserFullName || newUserEmail,
+            role: newUserRole,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Gagal membuat user');
+      }
+
+      toast({
+        title: "Berhasil",
+        description: "User baru berhasil dibuat",
+      });
+
+      setAddUserDialogOpen(false);
+      setNewUserEmail("");
+      setNewUserPassword("");
+      setNewUserFullName("");
+      setNewUserRole("staf_biasa");
+      fetchUsers();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: userToDelete.id,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Gagal menghapus user');
+      }
+
+      toast({
+        title: "Berhasil",
+        description: "User berhasil dihapus",
+      });
+
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+      fetchUsers();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredUsers = users.filter((user) =>
     user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -141,6 +252,69 @@ export default function Akun() {
           <h1 className="text-3xl font-bold">Manajemen Akun</h1>
           <p className="text-muted-foreground">Kelola pengguna dan role akses</p>
         </div>
+        <Dialog open={addUserDialogOpen} onOpenChange={setAddUserDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Tambah User
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Tambah User Baru</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  placeholder="email@example.com"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Password</Label>
+                <Input
+                  type="password"
+                  placeholder="Minimal 6 karakter"
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Nama Lengkap (Opsional)</Label>
+                <Input
+                  type="text"
+                  placeholder="Nama lengkap"
+                  value={newUserFullName}
+                  onChange={(e) => setNewUserFullName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <Select value={newUserRole} onValueChange={(value) => setNewUserRole(value as UserRole)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="staf_keuangan">Staf Keuangan</SelectItem>
+                    <SelectItem value="staf_biasa">Staf Biasa</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="text-xs text-muted-foreground space-y-1 mt-2">
+                  <p><strong>Admin:</strong> Akses ke semua menu</p>
+                  <p><strong>Staf Keuangan:</strong> Semua menu kecuali Akun</p>
+                  <p><strong>Staf Biasa:</strong> Dashboard, Kegiatan, Eviden saja</p>
+                </div>
+              </div>
+              <Button onClick={handleCreateUser} className="w-full" disabled={isCreatingUser}>
+                {isCreatingUser ? "Membuat User..." : "Buat User"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
@@ -170,6 +344,16 @@ export default function Akun() {
                   <Badge variant={roleVariants[user.role]}>
                     {roleLabels[user.role]}
                   </Badge>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => {
+                      setUserToDelete(user);
+                      setDeleteDialogOpen(true);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                   <Dialog open={dialogOpen && selectedUser?.id === user.id} onOpenChange={(open) => {
                     if (!open) {
                       setSelectedUser(null);
@@ -237,6 +421,30 @@ export default function Akun() {
           </Card>
         )}
       </div>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hapus User</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm">
+              Apakah Anda yakin ingin menghapus user <strong>{userToDelete?.email}</strong>?
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Tindakan ini tidak dapat dibatalkan. Semua data yang terkait dengan user ini akan dihapus.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                Batal
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteUser}>
+                Hapus User
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
