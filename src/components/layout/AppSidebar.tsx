@@ -5,8 +5,7 @@ import {
   FileText, 
   Package,
   Users,
-  LogOut,
-  Network
+  LogOut
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,7 +40,6 @@ const items: MenuItem[] = [
   { title: "POK", url: "/pok", icon: DollarSign, roles: ["admin", "staf_keuangan"] },
   { title: "Pencairan", url: "/pencairan", icon: Package, roles: ["admin", "staf_keuangan"] },
   { title: "Eviden", url: "/eviden", icon: FileText, roles: ["admin", "staf_keuangan", "staf_biasa"] },
-  { title: "ERD", url: "/erd", icon: Network, roles: ["admin", "staf_keuangan", "staf_biasa"] },
   { title: "Akun", url: "/akun", icon: Users, roles: ["admin"] },
 ];
 
