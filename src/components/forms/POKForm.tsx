@@ -14,11 +14,12 @@ const pokSchema = z.object({
   nama_akun: z.string().min(1, "Nama akun wajib diisi"),
   kode_akun: z.string().min(1, "Kode akun wajib diisi"),
   jenis_akun: z.string().min(1, "Jenis akun wajib diisi"),
-  uraian: z.string().min(1, "Uraian wajib diisi"),
-  volume: z.string().optional(),
+  uraian: z.string().optional(),
+  volume: z.coerce.number().int().positive().optional(),
   satuan: z.string().optional(),
   harga: z.string().optional(),
   nilai_anggaran: z.string().min(1, "Nilai anggaran wajib diisi"),
+  tahun: z.coerce.number().int().min(2000, "Tahun tidak valid").max(2100, "Tahun tidak valid"),
 });
 
 type POKFormData = z.infer<typeof pokSchema>;
@@ -39,12 +40,15 @@ export const POKForm = ({ onSuccess, editData, currentVersion }: POKFormProps) =
       nama_akun: editData.nama_akun,
       kode_akun: editData.kode_akun,
       jenis_akun: editData.jenis_akun,
-      uraian: editData.uraian,
-      volume: editData.volume || "",
+      uraian: editData.uraian || "",
+      volume: editData.volume || undefined,
       satuan: editData.satuan || "",
       harga: editData.harga?.toString() || "",
       nilai_anggaran: editData.nilai_anggaran?.toString() || "",
-    } : undefined,
+      tahun: editData.tahun || new Date().getFullYear(),
+    } : {
+      tahun: new Date().getFullYear(),
+    },
   });
 
   const onSubmit = async (data: POKFormData) => {
@@ -58,11 +62,12 @@ export const POKForm = ({ onSuccess, editData, currentVersion }: POKFormProps) =
         nama_akun: data.nama_akun,
         kode_akun: data.kode_akun,
         jenis_akun: data.jenis_akun,
-        uraian: data.uraian,
+        uraian: data.uraian || null,
         volume: data.volume || null,
         satuan: data.satuan || null,
         harga: data.harga ? parseFloat(data.harga) : null,
         nilai_anggaran: parseFloat(data.nilai_anggaran),
+        tahun: data.tahun,
         versi: editData ? editData.versi : currentVersion || 1,
         tanggal_versi: editData ? editData.tanggal_versi : new Date().toISOString(),
       };
@@ -133,7 +138,13 @@ export const POKForm = ({ onSuccess, editData, currentVersion }: POKFormProps) =
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="uraian">Uraian</Label>
+        <Label htmlFor="tahun">Tahun</Label>
+        <Input id="tahun" type="number" {...register("tahun")} placeholder="2025" />
+        {errors.tahun && <p className="text-sm text-destructive">{errors.tahun.message}</p>}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="uraian">Uraian (Opsional)</Label>
         <Textarea id="uraian" {...register("uraian")} placeholder="Masukkan uraian detail" />
         {errors.uraian && <p className="text-sm text-destructive">{errors.uraian.message}</p>}
       </div>
@@ -141,7 +152,7 @@ export const POKForm = ({ onSuccess, editData, currentVersion }: POKFormProps) =
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="volume">Volume</Label>
-          <Input id="volume" {...register("volume")} placeholder="e.g., 10 ORG x 2 HR" />
+          <Input id="volume" type="number" {...register("volume")} placeholder="10" />
           {errors.volume && <p className="text-sm text-destructive">{errors.volume.message}</p>}
         </div>
 

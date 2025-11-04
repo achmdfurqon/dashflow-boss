@@ -327,12 +327,13 @@ export type Database = {
           nama_akun: string
           nilai_anggaran: number
           satuan: string | null
+          tahun: number | null
           tanggal_versi: string | null
           updated_at: string
-          uraian: string
+          uraian: string | null
           user_id: string
           versi: number | null
-          volume: string | null
+          volume: number | null
         }
         Insert: {
           created_at?: string
@@ -343,12 +344,13 @@ export type Database = {
           nama_akun: string
           nilai_anggaran: number
           satuan?: string | null
+          tahun?: number | null
           tanggal_versi?: string | null
           updated_at?: string
-          uraian: string
+          uraian?: string | null
           user_id: string
           versi?: number | null
-          volume?: string | null
+          volume?: number | null
         }
         Update: {
           created_at?: string
@@ -359,12 +361,13 @@ export type Database = {
           nama_akun?: string
           nilai_anggaran?: number
           satuan?: string | null
+          tahun?: number | null
           tanggal_versi?: string | null
           updated_at?: string
-          uraian?: string
+          uraian?: string | null
           user_id?: string
           versi?: number | null
-          volume?: string | null
+          volume?: number | null
         }
         Relationships: []
       }

@@ -72,6 +72,7 @@ export default function POK() {
       satuan: item.satuan,
       harga: item.harga,
       nilai_anggaran: item.nilai_anggaran,
+      tahun: item.tahun,
       versi: newVersion,
       tanggal_versi: new Date().toISOString()
     }));
@@ -122,11 +123,11 @@ export default function POK() {
     const matchesSearch = 
       item.kode_akun.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.nama_akun.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.uraian.toLowerCase().includes(searchQuery.toLowerCase());
+      (item.uraian && item.uraian.toLowerCase().includes(searchQuery.toLowerCase()));
     
     // Year filter
     if (selectedYear) {
-      const itemYear = new Date(item.tanggal_versi || item.created_at).getFullYear();
+      const itemYear = item.tahun || new Date(item.tanggal_versi || item.created_at).getFullYear();
       if (itemYear !== selectedYear) return false;
     }
     
@@ -158,14 +159,15 @@ export default function POK() {
     }
 
     const worksheetData = [
-      ["KODE", "URAIAN", "VOLUME", "SATUAN", "HARGA", "TOTAL", "VERSI", "TANGGAL VERSI"],
+      ["KODE", "URAIAN", "VOLUME", "SATUAN", "HARGA", "TOTAL", "TAHUN", "VERSI", "TANGGAL VERSI"],
       ...versionPOK.map((pok) => [
         pok.kode_akun,
-        `${pok.nama_akun} - ${pok.uraian}`,
+        `${pok.nama_akun}${pok.uraian ? ' - ' + pok.uraian : ''}`,
         pok.volume || "",
         pok.satuan || "",
         pok.harga ? Number(pok.harga) : "",
         Number(pok.nilai_anggaran),
+        pok.tahun || "",
         pok.versi || 1,
         new Date(pok.tanggal_versi || pok.created_at).toLocaleDateString('id-ID')
       ]),
@@ -181,6 +183,7 @@ export default function POK() {
       { wch: 10 }, // SATUAN
       { wch: 15 }, // HARGA
       { wch: 15 }, // TOTAL
+      { wch: 10 }, // TAHUN
       { wch: 10 }, // VERSI
       { wch: 15 }, // TANGGAL VERSI
     ];
@@ -320,10 +323,14 @@ export default function POK() {
                     <p className="font-medium">{pok.harga ? formatCurrency(Number(pok.harga)) : "-"}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4 text-xs">
+                <div className="grid grid-cols-4 gap-4 text-xs">
                   <div>
                     <p className="text-muted-foreground">Nilai Anggaran</p>
                     <p className="font-medium">{formatCurrency(Number(pok.nilai_anggaran))}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Tahun</p>
+                    <p className="font-medium">{pok.tahun || "-"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Tanggal Versi</p>
