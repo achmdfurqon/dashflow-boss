@@ -7,10 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { PermissionsManager } from "@/components/forms/PermissionsManager";
 
 type UserRole = "admin" | "staf_keuangan" | "staf_biasa";
 
@@ -247,12 +249,20 @@ export default function Akun() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Manajemen Akun</h1>
-          <p className="text-muted-foreground">Kelola pengguna dan role akses</p>
-        </div>
-        <Dialog open={addUserDialogOpen} onOpenChange={setAddUserDialogOpen}>
+      <div>
+        <h1 className="text-3xl font-bold">Manajemen Akun</h1>
+        <p className="text-muted-foreground">Kelola pengguna dan role akses</p>
+      </div>
+
+      <Tabs defaultValue="users" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="users">Manajemen User</TabsTrigger>
+          <TabsTrigger value="permissions">Pengaturan Permissions</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="users" className="space-y-6">
+          <div className="flex justify-end">
+            <Dialog open={addUserDialogOpen} onOpenChange={setAddUserDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <UserPlus className="h-4 w-4 mr-2" />
@@ -314,10 +324,10 @@ export default function Akun() {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
-      </div>
+            </Dialog>
+          </div>
 
-      <Card>
+          <Card>
         <CardContent className="pt-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -329,9 +339,9 @@ export default function Akun() {
             />
           </div>
         </CardContent>
-      </Card>
+          </Card>
 
-      <div className="grid gap-4">
+          <div className="grid gap-4">
         {filteredUsers.map((user) => (
           <Card key={user.id} className="hover:shadow-lg transition-shadow">
             <CardHeader>
@@ -410,41 +420,47 @@ export default function Akun() {
                 </div>
               </div>
             </CardHeader>
-          </Card>
-        ))}
+            </Card>
+          ))}
 
-        {filteredUsers.length === 0 && (
-          <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
-              Tidak ada pengguna ditemukan
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Hapus User</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm">
-              Apakah Anda yakin ingin menghapus user <strong>{userToDelete?.email}</strong>?
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Tindakan ini tidak dapat dibatalkan. Semua data yang terkait dengan user ini akan dihapus.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-                Batal
-              </Button>
-              <Button variant="destructive" onClick={handleDeleteUser}>
-                Hapus User
-              </Button>
-            </div>
+          {filteredUsers.length === 0 && (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Tidak ada pengguna ditemukan
+              </CardContent>
+            </Card>
+          )}
           </div>
-        </DialogContent>
-      </Dialog>
+
+          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Hapus User</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm">
+                  Apakah Anda yakin ingin menghapus user <strong>{userToDelete?.email}</strong>?
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Tindakan ini tidak dapat dibatalkan. Semua data yang terkait dengan user ini akan dihapus.
+                </p>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                    Batal
+                  </Button>
+                  <Button variant="destructive" onClick={handleDeleteUser}>
+                    Hapus User
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        <TabsContent value="permissions">
+          <PermissionsManager />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
