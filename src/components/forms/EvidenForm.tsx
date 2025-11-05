@@ -16,6 +16,7 @@ import { ManageJenisEviden } from "./ManageJenisEviden";
 const evidenSchema = z.object({
   title: z.string().min(1, "Nama eviden harus diisi"),
   tipe_eviden: z.enum(["foto", "dokumen"]),
+  id_ref_kategori: z.string().optional(),
   id_ref_eviden: z.string().min(1, "Jenis eviden harus dipilih"),
   file_eviden: z.string().optional(),
   deskripsi: z.string().optional(),
@@ -37,6 +38,7 @@ export const EvidenForm = ({ onSuccess, initialData }: EvidenFormProps) => {
   const [kegiatanList, setKegiatanList] = useState<any[]>([]);
   const [pokList, setPokList] = useState<any[]>([]);
   const [refEvidenList, setRefEvidenList] = useState<any[]>([]);
+  const [refKategoriList, setRefKategoriList] = useState<any[]>([]);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [selectedPok, setSelectedPok] = useState<string>();
 
@@ -47,11 +49,13 @@ export const EvidenForm = ({ onSuccess, initialData }: EvidenFormProps) => {
   useEffect(() => {
     fetchKegiatanList();
     fetchRefEvidenList();
+    fetchRefKategoriList();
     fetchPokList();
     
     if (initialData) {
       setValue("title", initialData.title);
       setValue("tipe_eviden", initialData.tipe_eviden);
+      setValue("id_ref_kategori", initialData.id_ref_kategori);
       setValue("id_ref_eviden", initialData.id_ref_eviden);
       setValue("file_eviden", initialData.file_eviden);
       setValue("deskripsi", initialData.deskripsi);
@@ -108,6 +112,15 @@ export const EvidenForm = ({ onSuccess, initialData }: EvidenFormProps) => {
     if (data) setRefEvidenList(data);
   };
 
+  const fetchRefKategoriList = async () => {
+    const { data } = await supabase
+      .from("ref_kategori_eviden")
+      .select("*")
+      .order("kategori_eviden");
+    
+    if (data) setRefKategoriList(data);
+  };
+
   const onSubmit = async (data: EvidenFormData) => {
     setLoading(true);
     try {
@@ -117,6 +130,7 @@ export const EvidenForm = ({ onSuccess, initialData }: EvidenFormProps) => {
       const payload = {
         title: data.title,
         tipe_eviden: data.tipe_eviden,
+        id_ref_kategori: data.id_ref_kategori || null,
         id_ref_eviden: data.id_ref_eviden,
         file_eviden: data.file_eviden || null,
         deskripsi: data.deskripsi || null,
@@ -174,6 +188,22 @@ export const EvidenForm = ({ onSuccess, initialData }: EvidenFormProps) => {
           </SelectContent>
         </Select>
         {errors.tipe_eviden && <p className="text-sm text-destructive">{errors.tipe_eviden.message}</p>}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="id_ref_kategori">Kategori Eviden (opsional)</Label>
+        <Select onValueChange={(value) => setValue("id_ref_kategori", value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Pilih kategori eviden" />
+          </SelectTrigger>
+          <SelectContent>
+            {refKategoriList.map((kategori) => (
+              <SelectItem key={kategori.id} value={kategori.id}>
+                {kategori.kategori_eviden}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">

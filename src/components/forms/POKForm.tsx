@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const pokSchema = z.object({
+  id_ref_program: z.string().optional(),
   nama_akun: z.string().min(1, "Nama akun wajib diisi"),
   kode_akun: z.string().min(1, "Kode akun wajib diisi"),
   jenis_akun: z.string().min(1, "Jenis akun wajib diisi"),
@@ -33,10 +34,12 @@ interface POKFormProps {
 export const POKForm = ({ onSuccess, editData, currentVersion }: POKFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [programList, setProgramList] = useState<any[]>([]);
 
   const { register, handleSubmit, control, formState: { errors } } = useForm<POKFormData>({
     resolver: zodResolver(pokSchema),
     defaultValues: editData ? {
+      id_ref_program: editData.id_ref_program || "",
       nama_akun: editData.nama_akun,
       kode_akun: editData.kode_akun,
       jenis_akun: editData.jenis_akun,
@@ -51,6 +54,19 @@ export const POKForm = ({ onSuccess, editData, currentVersion }: POKFormProps) =
     },
   });
 
+  useEffect(() => {
+    fetchProgramList();
+  }, []);
+
+  const fetchProgramList = async () => {
+    const { data } = await supabase
+      .from("ref_program")
+      .select("*")
+      .order("nama_program");
+    
+    if (data) setProgramList(data);
+  };
+
   const onSubmit = async (data: POKFormData) => {
     setLoading(true);
     try {
@@ -59,6 +75,7 @@ export const POKForm = ({ onSuccess, editData, currentVersion }: POKFormProps) =
 
       const pokData = {
         user_id: user.id,
+        id_ref_program: data.id_ref_program || null,
         nama_akun: data.nama_akun,
         kode_akun: data.kode_akun,
         jenis_akun: data.jenis_akun,
@@ -99,6 +116,28 @@ export const POKForm = ({ onSuccess, editData, currentVersion }: POKFormProps) =
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="id_ref_program">Nama Program (Opsional)</Label>
+        <Controller
+          name="id_ref_program"
+          control={control}
+          render={({ field }) => (
+            <Select onValueChange={field.onChange} value={field.value}>
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih program" />
+              </SelectTrigger>
+              <SelectContent>
+                {programList.map((program) => (
+                  <SelectItem key={program.id} value={program.id}>
+                    {program.nama_program}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="nama_akun">Nama Akun</Label>
         <Input id="nama_akun" {...register("nama_akun")} placeholder="Enter account name" className="text-sm" />
