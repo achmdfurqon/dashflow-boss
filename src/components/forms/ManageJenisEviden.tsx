@@ -14,7 +14,7 @@ interface JenisEviden {
 }
 
 interface ManageJenisEvidenProps {
-  onUpdate: () => void;
+  onUpdate?: () => void;
 }
 
 export const ManageJenisEviden = ({ onUpdate }: ManageJenisEvidenProps) => {
@@ -46,7 +46,7 @@ export const ManageJenisEviden = ({ onUpdate }: ManageJenisEvidenProps) => {
       toast({ title: "Berhasil", description: "Jenis eviden berhasil ditambahkan" });
       setNewJenis("");
       fetchJenisEviden();
-      onUpdate();
+      onUpdate?.();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -70,7 +70,7 @@ export const ManageJenisEviden = ({ onUpdate }: ManageJenisEvidenProps) => {
       setEditingId(null);
       setEditValue("");
       fetchJenisEviden();
-      onUpdate();
+      onUpdate?.();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -87,7 +87,7 @@ export const ManageJenisEviden = ({ onUpdate }: ManageJenisEvidenProps) => {
       
       toast({ title: "Berhasil", description: "Jenis eviden berhasil dihapus" });
       fetchJenisEviden();
-      onUpdate();
+      onUpdate?.();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {

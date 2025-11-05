@@ -24,6 +24,7 @@ export type Database = {
           id_non_giat: string | null
           id_pok: string | null
           id_ref_eviden: string | null
+          id_ref_kategori: string | null
           tahun: number | null
           tipe_eviden: string | null
           title: string | null
@@ -39,6 +40,7 @@ export type Database = {
           id_non_giat?: string | null
           id_pok?: string | null
           id_ref_eviden?: string | null
+          id_ref_kategori?: string | null
           tahun?: number | null
           tipe_eviden?: string | null
           title?: string | null
@@ -54,6 +56,7 @@ export type Database = {
           id_non_giat?: string | null
           id_pok?: string | null
           id_ref_eviden?: string | null
+          id_ref_kategori?: string | null
           tahun?: number | null
           tipe_eviden?: string | null
           title?: string | null
@@ -87,6 +90,13 @@ export type Database = {
             columns: ["id_ref_eviden"]
             isOneToOne: false
             referencedRelation: "ref_eviden"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eviden_id_ref_kategori_fkey"
+            columns: ["id_ref_kategori"]
+            isOneToOne: false
+            referencedRelation: "ref_kategori_eviden"
             referencedColumns: ["id"]
           },
         ]
@@ -358,6 +368,7 @@ export type Database = {
           created_at: string
           harga: number | null
           id: string
+          id_ref_program: string | null
           jenis_akun: string
           kode_akun: string
           nama_akun: string
@@ -375,6 +386,7 @@ export type Database = {
           created_at?: string
           harga?: number | null
           id?: string
+          id_ref_program?: string | null
           jenis_akun: string
           kode_akun: string
           nama_akun: string
@@ -392,6 +404,7 @@ export type Database = {
           created_at?: string
           harga?: number | null
           id?: string
+          id_ref_program?: string | null
           jenis_akun?: string
           kode_akun?: string
           nama_akun?: string
@@ -405,7 +418,15 @@ export type Database = {
           versi?: number | null
           volume?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pok_id_ref_program_fkey"
+            columns: ["id_ref_program"]
+            isOneToOne: false
+            referencedRelation: "ref_program"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -464,6 +485,42 @@ export type Database = {
           created_at?: string
           id?: string
           jenis_eviden?: string
+        }
+        Relationships: []
+      }
+      ref_kategori_eviden: {
+        Row: {
+          created_at: string
+          id: string
+          kategori_eviden: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kategori_eviden: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kategori_eviden?: string
+        }
+        Relationships: []
+      }
+      ref_program: {
+        Row: {
+          created_at: string
+          id: string
+          nama_program: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nama_program: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nama_program?: string
         }
         Relationships: []
       }

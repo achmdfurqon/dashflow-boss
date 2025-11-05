@@ -10,6 +10,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/hooks/use-toast";
 import { EvidenForm } from "@/components/forms/EvidenForm";
 import { supabase } from "@/integrations/supabase/client";
+import { ManageJenisEviden } from "@/components/forms/ManageJenisEviden";
+import ManageKategoriEviden from "@/components/forms/ManageKategoriEviden";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, parseISO } from "date-fns";
 
 export default function Eviden() {
@@ -94,11 +97,20 @@ export default function Eviden() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Eviden</h1>
-          <p className="text-muted-foreground">Kelola dokumen dan bukti kegiatan</p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold">Eviden</h1>
+        <p className="text-muted-foreground">Kelola dokumen dan bukti kegiatan</p>
+      </div>
+
+      <Tabs defaultValue="eviden" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="eviden">Daftar Eviden</TabsTrigger>
+          <TabsTrigger value="jenis">Jenis Eviden</TabsTrigger>
+          <TabsTrigger value="kategori">Kategori Eviden</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="eviden" className="space-y-6">
+          <div className="flex justify-end">
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) setEditingEviden(null);
@@ -218,6 +230,30 @@ export default function Eviden() {
           </Card>
         )}
       </div>
+        </TabsContent>
+
+        <TabsContent value="jenis">
+          <Card>
+            <CardHeader>
+              <CardTitle>Kelola Jenis Eviden</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ManageJenisEviden />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="kategori">
+          <Card>
+            <CardHeader>
+              <CardTitle>Kelola Kategori Eviden</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ManageKategoriEviden />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

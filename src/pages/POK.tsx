@@ -12,6 +12,8 @@ import { POKForm } from "@/components/forms/POKForm";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import ManageProgram from "@/components/forms/ManageProgram";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function POK() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -211,11 +213,19 @@ export default function POK() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">POK Management</h1>
-          <p className="text-muted-foreground">Manajemen anggaran dan kode akun</p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold">POK Management</h1>
+        <p className="text-muted-foreground">Manajemen anggaran dan kode akun</p>
+      </div>
+
+      <Tabs defaultValue="pok" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="pok">Daftar POK</TabsTrigger>
+          <TabsTrigger value="program">Nama Program</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pok" className="space-y-6">
+        <div className="flex justify-end">
         <div className="flex gap-2">
           <Button variant="secondary" onClick={handleCreateNewVersion}>
             <Plus className="mr-2 h-4 w-4" />
@@ -354,6 +364,19 @@ export default function POK() {
           </Card>
         )}
       </div>
+        </TabsContent>
+
+        <TabsContent value="program">
+          <Card>
+            <CardHeader>
+              <CardTitle>Kelola Nama Program</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ManageProgram />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
