@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useYearFilter } from "@/contexts/YearFilterContext";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Line, LineChart } from "recharts";
 
 export default function Dashboard() {
   const { selectedYear } = useYearFilter();
@@ -124,6 +126,69 @@ export default function Dashboard() {
 
       const { count } = await query;
       return count || 0;
+    },
+    enabled: !!user,
+  });
+
+  const { data: monthlyActivityData } = useQuery({
+    queryKey: ["monthly-activity", user?.id, selectedYear],
+    queryFn: async () => {
+      let query = supabase
+        .from("kegiatan")
+        .select("waktu_mulai")
+        .eq("user_id", user?.id);
+
+      if (selectedYear) {
+        const yearStart = new Date(selectedYear, 0, 1).toISOString();
+        const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59).toISOString();
+        query = query.gte("waktu_mulai", yearStart).lte("waktu_mulai", yearEnd);
+      }
+
+      const { data } = await query;
+      
+      const monthlyCount: Record<number, number> = {};
+      data?.forEach((item) => {
+        const month = new Date(item.waktu_mulai).getMonth();
+        monthlyCount[month] = (monthlyCount[month] || 0) + 1;
+      });
+
+      return Array.from({ length: 12 }, (_, i) => ({
+        month: format(new Date(2024, i, 1), "MMM"),
+        kegiatan: monthlyCount[i] || 0,
+      }));
+    },
+    enabled: !!user,
+  });
+
+  const { data: monthlyBudgetData } = useQuery({
+    queryKey: ["monthly-budget", user?.id, selectedYear],
+    queryFn: async () => {
+      let query = supabase
+        .from("pencairan")
+        .select("tgl_pencairan, riil_pencairan, nilai_pencairan, status_pencairan")
+        .eq("user_id", user?.id);
+
+      if (selectedYear) {
+        const yearStart = new Date(selectedYear, 0, 1).toISOString();
+        const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59).toISOString();
+        query = query.gte("tgl_pencairan", yearStart).lte("tgl_pencairan", yearEnd);
+      }
+
+      const { data } = await query;
+      
+      const monthlyBudget: Record<number, number> = {};
+      data?.forEach((item) => {
+        if (item.status_pencairan === "approved") {
+          const month = new Date(item.tgl_pencairan).getMonth();
+          const amount = Number(item.riil_pencairan || item.nilai_pencairan);
+          monthlyBudget[month] = (monthlyBudget[month] || 0) + amount;
+        }
+      });
+
+      return Array.from({ length: 12 }, (_, i) => ({
+        month: format(new Date(2024, i, 1), "MMM"),
+        anggaran: monthlyBudget[i] || 0,
+      }));
     },
     enabled: !!user,
   });
@@ -266,6 +331,87 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Tren Kegiatan per Bulan</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{
+                kegiatan: {
+                  label: "Kegiatan",
+                  color: "hsl(var(--chart-1))",
+                },
+              }}
+              className="h-[300px]"
+            >
+              <BarChart data={monthlyActivityData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="month" 
+                  className="text-xs"
+                  tick={{ fill: "hsl(var(--muted-foreground))" }}
+                />
+                <YAxis 
+                  className="text-xs"
+                  tick={{ fill: "hsl(var(--muted-foreground))" }}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="kegiatan" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Tren Pencairan per Bulan</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{
+                anggaran: {
+                  label: "Pencairan",
+                  color: "hsl(var(--chart-2))",
+                },
+              }}
+              className="h-[300px]"
+            >
+              <LineChart data={monthlyBudgetData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="month" 
+                  className="text-xs"
+                  tick={{ fill: "hsl(var(--muted-foreground))" }}
+                />
+                <YAxis 
+                  className="text-xs"
+                  tick={{ fill: "hsl(var(--muted-foreground))" }}
+                  tickFormatter={(value) => `${(value / 1000000).toFixed(0)}jt`}
+                />
+                <ChartTooltip 
+                  content={<ChartTooltipContent 
+                    formatter={(value) => new Intl.NumberFormat("id-ID", {
+                      style: "currency",
+                      currency: "IDR",
+                      maximumFractionDigits: 0,
+                    }).format(value as number)}
+                  />} 
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="anggaran" 
+                  stroke="hsl(var(--chart-2))" 
+                  strokeWidth={2}
+                  dot={{ fill: "hsl(var(--chart-2))", r: 4 }}
+                />
+              </LineChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
