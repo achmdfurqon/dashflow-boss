@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import ManageProgram from "@/components/forms/ManageProgram";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function POK() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -25,11 +26,24 @@ export default function POK() {
   const [versionDialogOpen, setVersionDialogOpen] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const [compareDialogOpen, setCompareDialogOpen] = useState(false);
+  const [programs, setPrograms] = useState<any[]>([]);
   const { selectedYear } = useYearFilter();
 
   useEffect(() => {
     fetchPOKItems();
+    fetchPrograms();
   }, []);
+
+  const fetchPrograms = async () => {
+    const { data } = await supabase
+      .from("ref_program")
+      .select("*")
+      .order("nama_program", { ascending: true });
+
+    if (data) {
+      setPrograms(data);
+    }
+  };
 
   const fetchPOKItems = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -211,6 +225,44 @@ export default function POK() {
     return { versions, maxVersion };
   };
 
+  const getSummaryByProgram = () => {
+    // Filter by year if selected
+    let items = pokItems;
+    if (selectedYear) {
+      items = pokItems.filter(item => {
+        const itemYear = item.tahun || new Date(item.tanggal_versi || item.created_at).getFullYear();
+        return itemYear === selectedYear;
+      });
+    }
+
+    // Group by program
+    const programSummary = new Map<string, { name: string; total: number; count: number }>();
+    
+    items.forEach(item => {
+      const programId = item.id_ref_program || 'no-program';
+      const programName = item.id_ref_program 
+        ? programs.find(p => p.id === item.id_ref_program)?.nama_program || 'Program Tidak Ditemukan'
+        : 'Tanpa Program';
+      
+      if (programSummary.has(programId)) {
+        const existing = programSummary.get(programId)!;
+        programSummary.set(programId, {
+          name: programName,
+          total: existing.total + Number(item.nilai_anggaran),
+          count: existing.count + 1
+        });
+      } else {
+        programSummary.set(programId, {
+          name: programName,
+          total: Number(item.nilai_anggaran),
+          count: 1
+        });
+      }
+    });
+
+    return Array.from(programSummary.entries()).map(([id, data]) => ({ id, ...data }));
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -221,6 +273,7 @@ export default function POK() {
       <Tabs defaultValue="pok" className="space-y-6">
         <TabsList>
           <TabsTrigger value="pok">Daftar POK</TabsTrigger>
+          <TabsTrigger value="ringkasan">Laporan Ringkasan</TabsTrigger>
           <TabsTrigger value="program">Nama Program</TabsTrigger>
         </TabsList>
 
@@ -366,13 +419,60 @@ export default function POK() {
       </div>
         </TabsContent>
 
+        <TabsContent value="ringkasan">
+          <Card>
+            <CardHeader>
+              <CardTitle>Laporan Ringkasan Anggaran per Program</CardTitle>
+              <p className="text-sm text-muted-foreground">Total anggaran dikelompokkan berdasarkan program</p>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nama Program</TableHead>
+                    <TableHead className="text-right">Jumlah Item</TableHead>
+                    <TableHead className="text-right">Total Anggaran</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {getSummaryByProgram().map((program) => (
+                    <TableRow key={program.id}>
+                      <TableCell className="font-medium">{program.name}</TableCell>
+                      <TableCell className="text-right">{program.count}</TableCell>
+                      <TableCell className="text-right font-semibold">{formatCurrency(program.total)}</TableCell>
+                    </TableRow>
+                  ))}
+                  {getSummaryByProgram().length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground">
+                        Tidak ada data POK
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {getSummaryByProgram().length > 0 && (
+                    <TableRow className="bg-muted/50 font-semibold">
+                      <TableCell>TOTAL KESELURUHAN</TableCell>
+                      <TableCell className="text-right">
+                        {getSummaryByProgram().reduce((sum, p) => sum + p.count, 0)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(getSummaryByProgram().reduce((sum, p) => sum + p.total, 0))}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="program">
           <Card>
             <CardHeader>
               <CardTitle>Kelola Nama Program</CardTitle>
             </CardHeader>
             <CardContent>
-              <ManageProgram />
+              <ManageProgram onUpdate={fetchPrograms} />
             </CardContent>
           </Card>
         </TabsContent>
