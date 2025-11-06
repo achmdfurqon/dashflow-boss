@@ -1,8 +1,147 @@
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, DollarSign, FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useYearFilter } from "@/contexts/YearFilterContext";
+import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Dashboard() {
+  const { selectedYear } = useYearFilter();
+  const { user } = useAuth();
+
+  const { data: kegiatanStats } = useQuery({
+    queryKey: ["kegiatan-stats", user?.id, selectedYear],
+    queryFn: async () => {
+      let query = supabase
+        .from("kegiatan")
+        .select("*", { count: "exact" })
+        .eq("user_id", user?.id);
+
+      if (selectedYear) {
+        const yearStart = new Date(selectedYear, 0, 1).toISOString();
+        const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59).toISOString();
+        query = query.gte("waktu_mulai", yearStart).lte("waktu_mulai", yearEnd);
+      }
+
+      const { data, count } = await query;
+
+      const now = new Date();
+      const completed = data?.filter(k => new Date(k.waktu_selesai) < now).length || 0;
+      const ongoing = data?.filter(k => {
+        const start = new Date(k.waktu_mulai);
+        const end = new Date(k.waktu_selesai);
+        return start <= now && now <= end;
+      }).length || 0;
+      const upcoming = data?.filter(k => new Date(k.waktu_mulai) > now).length || 0;
+
+      return {
+        total: count || 0,
+        completed,
+        ongoing,
+        upcoming,
+        recent: data?.sort((a, b) => 
+          new Date(b.waktu_mulai).getTime() - new Date(a.waktu_mulai).getTime()
+        ).slice(0, 4) || []
+      };
+    },
+    enabled: !!user,
+  });
+
+  const { data: pokStats } = useQuery({
+    queryKey: ["pok-stats", user?.id, selectedYear],
+    queryFn: async () => {
+      let query = supabase
+        .from("pok")
+        .select("nilai_anggaran")
+        .eq("user_id", user?.id);
+
+      if (selectedYear) {
+        query = query.eq("tahun", selectedYear);
+      }
+
+      const { data } = await query;
+      const total = data?.reduce((sum, pok) => sum + Number(pok.nilai_anggaran), 0) || 0;
+
+      return {
+        total,
+        formatted: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          maximumFractionDigits: 0,
+        }).format(total),
+      };
+    },
+    enabled: !!user,
+  });
+
+  const { data: pencairanStats } = useQuery({
+    queryKey: ["pencairan-stats", user?.id, selectedYear],
+    queryFn: async () => {
+      let query = supabase
+        .from("pencairan")
+        .select("status_pencairan, riil_pencairan, nilai_pencairan")
+        .eq("user_id", user?.id);
+
+      if (selectedYear) {
+        const yearStart = new Date(selectedYear, 0, 1).toISOString();
+        const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59).toISOString();
+        query = query.gte("tgl_pencairan", yearStart).lte("tgl_pencairan", yearEnd);
+      }
+
+      const { data } = await query;
+      
+      const pending = data?.filter(p => p.status_pencairan === "pending").length || 0;
+      const approved = data?.reduce((sum, p) => 
+        p.status_pencairan === "approved" ? sum + Number(p.riil_pencairan || p.nilai_pencairan) : sum, 0
+      ) || 0;
+
+      return {
+        pending,
+        approved,
+        approvedFormatted: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          maximumFractionDigits: 0,
+        }).format(approved),
+      };
+    },
+    enabled: !!user,
+  });
+
+  const { data: evidenStats } = useQuery({
+    queryKey: ["eviden-stats", user?.id, selectedYear],
+    queryFn: async () => {
+      let query = supabase
+        .from("eviden")
+        .select("*", { count: "exact" })
+        .eq("user_id", user?.id);
+
+      if (selectedYear) {
+        query = query.eq("tahun", selectedYear);
+      }
+
+      const { count } = await query;
+      return count || 0;
+    },
+    enabled: !!user,
+  });
+
+  const getActivityStatus = (activity: any) => {
+    const now = new Date();
+    const start = new Date(activity.waktu_mulai);
+    const end = new Date(activity.waktu_selesai);
+    
+    if (end < now) return "Selesai";
+    if (start <= now && now <= end) return "Proses";
+    return "Belum Mulai";
+  };
+
+  const totalBudget = pokStats?.total || 0;
+  const approvedAmount = pencairanStats?.approved || 0;
+  const percentage = totalBudget > 0 ? (approvedAmount / totalBudget) * 100 : 0;
+
   return (
     <div className="space-y-6">
       <div>
@@ -13,32 +152,30 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Kegiatan"
-          value={156}
+          value={kegiatanStats?.total || 0}
           icon={Calendar}
-          description="Bulan ini"
-          trend={{ value: 12, isPositive: true }}
+          description={selectedYear ? `Tahun ${selectedYear}` : "Semua tahun"}
           variant="info"
         />
         <StatCard
           title="Total Anggaran"
-          value="Rp 2.5M"
+          value={pokStats?.formatted || "Rp 0"}
           icon={DollarSign}
           description="POK aktif"
           variant="success"
         />
         <StatCard
           title="Pencairan Pending"
-          value={23}
+          value={pencairanStats?.pending || 0}
           icon={Clock}
           description="Menunggu proses"
           variant="warning"
         />
         <StatCard
           title="Eviden Terkumpul"
-          value={432}
+          value={evidenStats || 0}
           icon={FileText}
           description="Dokumen lengkap"
-          trend={{ value: 8, isPositive: true }}
           variant="default"
         />
       </div>
@@ -55,21 +192,21 @@ export default function Dashboard() {
                   <CheckCircle className="h-4 w-4 text-success" />
                   <span className="text-sm font-medium">Selesai</span>
                 </div>
-                <span className="text-sm font-bold">89</span>
+                <span className="text-sm font-bold">{kegiatanStats?.completed || 0}</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-warning" />
                   <span className="text-sm font-medium">Dalam Proses</span>
                 </div>
-                <span className="text-sm font-bold">45</span>
+                <span className="text-sm font-bold">{kegiatanStats?.ongoing || 0}</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-destructive" />
                   <span className="text-sm font-medium">Belum Mulai</span>
                 </div>
-                <span className="text-sm font-bold">22</span>
+                <span className="text-sm font-bold">{kegiatanStats?.upcoming || 0}</span>
               </div>
             </div>
           </CardContent>
@@ -81,26 +218,29 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {[
-                { name: "Workshop Pengembangan SDM", date: "28 Sep 2025", status: "Selesai" },
-                { name: "Rapat Koordinasi Tim", date: "26 Sep 2025", status: "Proses" },
-                { name: "Pelatihan Teknis", date: "25 Sep 2025", status: "Selesai" },
-                { name: "Monitoring Lapangan", date: "24 Sep 2025", status: "Proses" },
-              ].map((activity, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">{activity.name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{activity.date}</p>
+              {kegiatanStats?.recent && kegiatanStats.recent.length > 0 ? (
+                kegiatanStats.recent.map((activity) => (
+                  <div key={activity.id} className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-foreground">{activity.nama}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {format(new Date(activity.waktu_mulai), "dd MMM yyyy")}
+                      </p>
+                    </div>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      getActivityStatus(activity) === "Selesai" 
+                        ? "bg-success/10 text-success" 
+                        : getActivityStatus(activity) === "Proses"
+                        ? "bg-warning/10 text-warning"
+                        : "bg-destructive/10 text-destructive"
+                    }`}>
+                      {getActivityStatus(activity)}
+                    </span>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    activity.status === "Selesai" 
-                      ? "bg-success/10 text-success" 
-                      : "bg-warning/10 text-warning"
-                  }`}>
-                    {activity.status}
-                  </span>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">Belum ada kegiatan</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -114,14 +254,14 @@ export default function Dashboard() {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Total Disetujui</span>
-              <span className="font-semibold text-success">Rp 1.8M</span>
+              <span className="font-semibold text-success">{pencairanStats?.approvedFormatted || "Rp 0"}</span>
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div className="h-full bg-success" style={{ width: "72%" }} />
+              <div className="h-full bg-success" style={{ width: `${Math.min(percentage, 100)}%` }} />
             </div>
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>72% dari total anggaran</span>
-              <span>Rp 2.5M</span>
+              <span>{percentage.toFixed(0)}% dari total anggaran</span>
+              <span>{pokStats?.formatted || "Rp 0"}</span>
             </div>
           </div>
         </CardContent>
