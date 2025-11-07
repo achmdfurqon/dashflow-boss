@@ -8,23 +8,41 @@ import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Line, LineChart } from "recharts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
 
 export default function Dashboard() {
   const { selectedYear } = useYearFilter();
   const { user } = useAuth();
+  const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
+
+  const { data: programs } = useQuery({
+    queryKey: ["programs"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ref_program")
+        .select("*")
+        .order("nama_program");
+      return data || [];
+    },
+  });
 
   const { data: kegiatanStats } = useQuery({
-    queryKey: ["kegiatan-stats", user?.id, selectedYear],
+    queryKey: ["kegiatan-stats", user?.id, selectedYear, selectedProgram],
     queryFn: async () => {
       let query = supabase
         .from("kegiatan")
-        .select("*", { count: "exact" })
+        .select("*, pok!inner(id_ref_program)", { count: "exact" })
         .eq("user_id", user?.id);
 
       if (selectedYear) {
         const yearStart = new Date(selectedYear, 0, 1).toISOString();
         const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59).toISOString();
         query = query.gte("waktu_mulai", yearStart).lte("waktu_mulai", yearEnd);
+      }
+
+      if (selectedProgram) {
+        query = query.eq("pok.id_ref_program", selectedProgram);
       }
 
       const { data, count } = await query;
@@ -52,7 +70,7 @@ export default function Dashboard() {
   });
 
   const { data: pokStats } = useQuery({
-    queryKey: ["pok-stats", user?.id, selectedYear],
+    queryKey: ["pok-stats", user?.id, selectedYear, selectedProgram],
     queryFn: async () => {
       let query = supabase
         .from("pok")
@@ -61,6 +79,10 @@ export default function Dashboard() {
 
       if (selectedYear) {
         query = query.eq("tahun", selectedYear);
+      }
+
+      if (selectedProgram) {
+        query = query.eq("id_ref_program", selectedProgram);
       }
 
       const { data } = await query;
@@ -79,17 +101,21 @@ export default function Dashboard() {
   });
 
   const { data: pencairanStats } = useQuery({
-    queryKey: ["pencairan-stats", user?.id, selectedYear],
+    queryKey: ["pencairan-stats", user?.id, selectedYear, selectedProgram],
     queryFn: async () => {
       let query = supabase
         .from("pencairan")
-        .select("status_pencairan, riil_pencairan, nilai_pencairan")
+        .select("status_pencairan, riil_pencairan, nilai_pencairan, pok!inner(id_ref_program)")
         .eq("user_id", user?.id);
 
       if (selectedYear) {
         const yearStart = new Date(selectedYear, 0, 1).toISOString();
         const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59).toISOString();
         query = query.gte("tgl_pencairan", yearStart).lte("tgl_pencairan", yearEnd);
+      }
+
+      if (selectedProgram) {
+        query = query.eq("pok.id_ref_program", selectedProgram);
       }
 
       const { data } = await query;
@@ -113,15 +139,19 @@ export default function Dashboard() {
   });
 
   const { data: evidenStats } = useQuery({
-    queryKey: ["eviden-stats", user?.id, selectedYear],
+    queryKey: ["eviden-stats", user?.id, selectedYear, selectedProgram],
     queryFn: async () => {
       let query = supabase
         .from("eviden")
-        .select("*", { count: "exact" })
+        .select("*, pok!inner(id_ref_program)", { count: "exact" })
         .eq("user_id", user?.id);
 
       if (selectedYear) {
         query = query.eq("tahun", selectedYear);
+      }
+
+      if (selectedProgram) {
+        query = query.eq("pok.id_ref_program", selectedProgram);
       }
 
       const { count } = await query;
@@ -131,17 +161,21 @@ export default function Dashboard() {
   });
 
   const { data: monthlyActivityData } = useQuery({
-    queryKey: ["monthly-activity", user?.id, selectedYear],
+    queryKey: ["monthly-activity", user?.id, selectedYear, selectedProgram],
     queryFn: async () => {
       let query = supabase
         .from("kegiatan")
-        .select("waktu_mulai")
+        .select("waktu_mulai, pok!inner(id_ref_program)")
         .eq("user_id", user?.id);
 
       if (selectedYear) {
         const yearStart = new Date(selectedYear, 0, 1).toISOString();
         const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59).toISOString();
         query = query.gte("waktu_mulai", yearStart).lte("waktu_mulai", yearEnd);
+      }
+
+      if (selectedProgram) {
+        query = query.eq("pok.id_ref_program", selectedProgram);
       }
 
       const { data } = await query;
@@ -161,17 +195,21 @@ export default function Dashboard() {
   });
 
   const { data: monthlyBudgetData } = useQuery({
-    queryKey: ["monthly-budget", user?.id, selectedYear],
+    queryKey: ["monthly-budget", user?.id, selectedYear, selectedProgram],
     queryFn: async () => {
       let query = supabase
         .from("pencairan")
-        .select("tgl_pencairan, riil_pencairan, nilai_pencairan, status_pencairan")
+        .select("tgl_pencairan, riil_pencairan, nilai_pencairan, status_pencairan, pok!inner(id_ref_program)")
         .eq("user_id", user?.id);
 
       if (selectedYear) {
         const yearStart = new Date(selectedYear, 0, 1).toISOString();
         const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59).toISOString();
         query = query.gte("tgl_pencairan", yearStart).lte("tgl_pencairan", yearEnd);
+      }
+
+      if (selectedProgram) {
+        query = query.eq("pok.id_ref_program", selectedProgram);
       }
 
       const { data } = await query;
@@ -209,9 +247,26 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Sistem Manajemen Eviden & Kegiatan</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Sistem Manajemen Eviden & Kegiatan</p>
+        </div>
+        <div className="w-64">
+          <Select value={selectedProgram || "all"} onValueChange={(value) => setSelectedProgram(value === "all" ? null : value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Semua Program" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Program</SelectItem>
+              {programs?.map((program) => (
+                <SelectItem key={program.id} value={program.id}>
+                  {program.nama_program}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
