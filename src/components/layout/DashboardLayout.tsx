@@ -16,7 +16,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { selectedYear, setSelectedYear } = useYearFilter();
 
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
+  const years = Array.from({ length: 5 }, (_, i) => currentYear + 1 - i); // n+1 sampai n-3
 
   return (
     <SidebarProvider>
