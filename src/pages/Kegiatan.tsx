@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Search, Calendar as CalendarIcon, Download, FileSpreadsheet, FileText, Pencil, Trash2, MessageCircle } from "lucide-react";
+import { Plus, Search, Calendar as CalendarIcon, Download, FileSpreadsheet, FileText, Pencil, Trash2, MessageCircle, Copy } from "lucide-react";
 import { useYearFilter } from "@/contexts/YearFilterContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { KegiatanForm } from "@/components/forms/KegiatanForm";
 import { MonthlyCalendar } from "@/components/calendar/MonthlyCalendar";
 import { supabase } from "@/integrations/supabase/client";
-import { format, parseISO, isWithinInterval } from "date-fns";
+import { format, parseISO, isWithinInterval, addDays, isBefore, isSameDay, startOfDay, isAfter, isToday } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
@@ -444,28 +444,66 @@ export default function Kegiatan() {
 
 // Report View Component
 function ReportView({ activities }: { activities: any[] }) {
+  // Expand multi-day activities to appear on each day
+  const expandedActivities = useMemo(() => {
+    const expanded: { activity: any; dateKey: string }[] = [];
+    
+    activities.forEach((activity) => {
+      const startDate = startOfDay(parseISO(activity.waktu_mulai));
+      const endDate = startOfDay(parseISO(activity.waktu_selesai));
+      
+      let currentDate = startDate;
+      while (isBefore(currentDate, endDate) || isSameDay(currentDate, endDate)) {
+        expanded.push({
+          activity,
+          dateKey: format(currentDate, "yyyy-MM-dd"),
+        });
+        currentDate = addDays(currentDate, 1);
+      }
+    });
+    
+    return expanded;
+  }, [activities]);
+
   const groupedActivities = useMemo(() => {
     const grouped: Record<string, any[]> = {};
     
-    const sortedActivities = [...activities].sort((a, b) => 
-      new Date(a.waktu_mulai).getTime() - new Date(b.waktu_mulai).getTime()
+    const sortedExpanded = [...expandedActivities].sort((a, b) => 
+      new Date(a.dateKey).getTime() - new Date(b.dateKey).getTime()
     );
     
-    sortedActivities.forEach((activity) => {
-      const dateKey = format(parseISO(activity.waktu_mulai), "yyyy-MM-dd");
+    sortedExpanded.forEach(({ activity, dateKey }) => {
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
       }
-      grouped[dateKey].push(activity);
+      // Avoid duplicates if same activity appears multiple times on same day
+      if (!grouped[dateKey].some(a => a.id === activity.id)) {
+        grouped[dateKey].push(activity);
+      }
     });
     
     return grouped;
-  }, [activities]);
+  }, [expandedActivities]);
 
-  const generateReportText = () => {
-    let text = "*REKAP KEGIATAN*\n\n";
+  // Get today and upcoming activities
+  const todayAndUpcomingActivities = useMemo(() => {
+    const today = startOfDay(new Date());
+    const filtered: Record<string, any[]> = {};
     
     Object.entries(groupedActivities).forEach(([dateKey, dateActivities]) => {
+      const date = parseISO(dateKey);
+      if (isSameDay(date, today) || isAfter(date, today)) {
+        filtered[dateKey] = dateActivities;
+      }
+    });
+    
+    return filtered;
+  }, [groupedActivities]);
+
+  const generateReportText = (activitiesToReport: Record<string, any[]>) => {
+    let text = "*REKAP KEGIATAN*\n\n";
+    
+    Object.entries(activitiesToReport).forEach(([dateKey, dateActivities]) => {
       const dateLabel = format(parseISO(dateKey), "EEEE, dd MMMM yyyy", { locale: localeId });
       text += `*${dateLabel}*\n\n`;
       
@@ -497,19 +535,51 @@ function ReportView({ activities }: { activities: any[] }) {
       return;
     }
     
-    const text = generateReportText();
+    const text = generateReportText(groupedActivities);
     const encodedText = encodeURIComponent(text);
     window.open(`https://wa.me/?text=${encodedText}`, "_blank");
   };
 
+  const handleCopyTodayAndUpcoming = async () => {
+    if (Object.keys(todayAndUpcomingActivities).length === 0) {
+      toast({
+        title: "Tidak ada data",
+        description: "Tidak ada kegiatan hari ini dan yang akan datang",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const text = generateReportText(todayAndUpcomingActivities);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "Berhasil",
+        description: "Agenda hari ini dan yang akan datang berhasil disalin",
+      });
+    } catch {
+      toast({
+        title: "Gagal",
+        description: "Gagal menyalin ke clipboard",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
         <CardTitle>Rekap Kegiatan</CardTitle>
-        <Button onClick={handleWhatsAppShare} className="gap-2">
-          <MessageCircle className="h-4 w-4" />
-          Kirim via WhatsApp
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={handleCopyTodayAndUpcoming} variant="outline" className="gap-2">
+            <Copy className="h-4 w-4" />
+            Salin Agenda Hari Ini & Mendatang
+          </Button>
+          <Button onClick={handleWhatsAppShare} className="gap-2">
+            <MessageCircle className="h-4 w-4" />
+            Kirim via WhatsApp
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {Object.keys(groupedActivities).length === 0 ? (
@@ -524,7 +594,7 @@ function ReportView({ activities }: { activities: any[] }) {
               </h3>
               <div className="space-y-4 pl-4">
                 {dateActivities.map((activity) => (
-                  <div key={activity.id} className="space-y-1">
+                  <div key={`${dateKey}-${activity.id}`} className="space-y-1">
                     <p className="font-medium text-primary">
                       {format(parseISO(activity.waktu_mulai), "HH:mm")} - {format(parseISO(activity.waktu_selesai), "HH:mm")}
                     </p>
