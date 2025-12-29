@@ -500,6 +500,38 @@ function ReportView({ activities }: { activities: any[] }) {
     return filtered;
   }, [groupedActivities]);
 
+  const getDisplayTime = (activity: any, currentDateKey: string) => {
+    const activityStart = parseISO(activity.waktu_mulai);
+    const activityEnd = parseISO(activity.waktu_selesai);
+    const currentDate = parseISO(currentDateKey);
+    
+    const isFirstDay = isSameDay(startOfDay(activityStart), currentDate);
+    const isLastDay = isSameDay(startOfDay(activityEnd), currentDate);
+    
+    let displayStartTime: string;
+    let displayEndTime: string;
+    
+    if (isFirstDay && isLastDay) {
+      // Single day activity - use original times
+      displayStartTime = format(activityStart, "HH:mm");
+      displayEndTime = format(activityEnd, "HH:mm");
+    } else if (isFirstDay) {
+      // First day of multi-day - original start to 17:00
+      displayStartTime = format(activityStart, "HH:mm");
+      displayEndTime = "17:00";
+    } else if (isLastDay) {
+      // Last day of multi-day - 07:00 to original end
+      displayStartTime = "07:00";
+      displayEndTime = format(activityEnd, "HH:mm");
+    } else {
+      // Middle days - 07:00 to 17:00
+      displayStartTime = "07:00";
+      displayEndTime = "17:00";
+    }
+    
+    return { displayStartTime, displayEndTime };
+  };
+
   const generateReportText = (activitiesToReport: Record<string, any[]>) => {
     let text = "*REKAP KEGIATAN*\n\n";
     
@@ -508,13 +540,12 @@ function ReportView({ activities }: { activities: any[] }) {
       text += `*${dateLabel}*\n\n`;
       
       dateActivities.forEach((activity) => {
-        const waktuMulai = format(parseISO(activity.waktu_mulai), "HH:mm", { locale: localeId });
-        const waktuSelesai = format(parseISO(activity.waktu_selesai), "HH:mm", { locale: localeId });
+        const { displayStartTime, displayEndTime } = getDisplayTime(activity, dateKey);
         const disposisi = activity.disposisi && activity.disposisi.length > 0 
           ? activity.disposisi.join(", ") 
           : "-";
         
-        text += `${waktuMulai} - ${waktuSelesai}\n`;
+        text += `${displayStartTime} - ${displayEndTime}\n`;
         text += `${activity.nama}\n`;
         text += `Penyelenggara: ${activity.penyelenggara}\n`;
         text += `Tempat: ${activity.tempat}\n`;
