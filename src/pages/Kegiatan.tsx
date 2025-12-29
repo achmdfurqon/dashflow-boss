@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Plus, Search, Calendar as CalendarIcon, Download, FileSpreadsheet, FileText, Pencil, Trash2 } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Plus, Search, Calendar as CalendarIcon, Download, FileSpreadsheet, FileText, Pencil, Trash2, MessageCircle } from "lucide-react";
 import { useYearFilter } from "@/contexts/YearFilterContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -239,6 +239,7 @@ export default function Kegiatan() {
         <TabsList>
           <TabsTrigger value="list">List View</TabsTrigger>
           <TabsTrigger value="calendar">Calendar View</TabsTrigger>
+          <TabsTrigger value="report">Report</TabsTrigger>
         </TabsList>
 
         <TabsContent value="list" className="space-y-6">
@@ -432,7 +433,120 @@ export default function Kegiatan() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="report" className="space-y-6">
+          <ReportView activities={filteredActivities} />
+        </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// Report View Component
+function ReportView({ activities }: { activities: any[] }) {
+  const groupedActivities = useMemo(() => {
+    const grouped: Record<string, any[]> = {};
+    
+    const sortedActivities = [...activities].sort((a, b) => 
+      new Date(a.waktu_mulai).getTime() - new Date(b.waktu_mulai).getTime()
+    );
+    
+    sortedActivities.forEach((activity) => {
+      const dateKey = format(parseISO(activity.waktu_mulai), "yyyy-MM-dd");
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+      }
+      grouped[dateKey].push(activity);
+    });
+    
+    return grouped;
+  }, [activities]);
+
+  const generateReportText = () => {
+    let text = "*REKAP KEGIATAN*\n\n";
+    
+    Object.entries(groupedActivities).forEach(([dateKey, dateActivities]) => {
+      const dateLabel = format(parseISO(dateKey), "EEEE, dd MMMM yyyy", { locale: localeId });
+      text += `*${dateLabel}*\n\n`;
+      
+      dateActivities.forEach((activity) => {
+        const waktuMulai = format(parseISO(activity.waktu_mulai), "HH:mm", { locale: localeId });
+        const waktuSelesai = format(parseISO(activity.waktu_selesai), "HH:mm", { locale: localeId });
+        const disposisi = activity.disposisi && activity.disposisi.length > 0 
+          ? activity.disposisi.join(", ") 
+          : "-";
+        
+        text += `${waktuMulai} - ${waktuSelesai}\n`;
+        text += `${activity.nama}\n`;
+        text += `Penyelenggara: ${activity.penyelenggara}\n`;
+        text += `Tempat: ${activity.tempat}\n`;
+        text += `Disposisi: ${disposisi}\n\n`;
+      });
+    });
+    
+    return text;
+  };
+
+  const handleWhatsAppShare = () => {
+    if (activities.length === 0) {
+      toast({
+        title: "Tidak ada data",
+        description: "Tidak ada kegiatan untuk dibagikan",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const text = generateReportText();
+    const encodedText = encodeURIComponent(text);
+    window.open(`https://wa.me/?text=${encodedText}`, "_blank");
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Rekap Kegiatan</CardTitle>
+        <Button onClick={handleWhatsAppShare} className="gap-2">
+          <MessageCircle className="h-4 w-4" />
+          Kirim via WhatsApp
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {Object.keys(groupedActivities).length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">
+            Tidak ada kegiatan ditemukan
+          </p>
+        ) : (
+          Object.entries(groupedActivities).map(([dateKey, dateActivities]) => (
+            <div key={dateKey} className="space-y-4">
+              <h3 className="font-semibold text-lg border-b pb-2">
+                {format(parseISO(dateKey), "EEEE, dd MMMM yyyy", { locale: localeId })}
+              </h3>
+              <div className="space-y-4 pl-4">
+                {dateActivities.map((activity) => (
+                  <div key={activity.id} className="space-y-1">
+                    <p className="font-medium text-primary">
+                      {format(parseISO(activity.waktu_mulai), "HH:mm")} - {format(parseISO(activity.waktu_selesai), "HH:mm")}
+                    </p>
+                    <p className="font-semibold">{activity.nama}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Penyelenggara: {activity.penyelenggara}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Tempat: {activity.tempat}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Disposisi: {activity.disposisi && activity.disposisi.length > 0 
+                        ? activity.disposisi.join(", ") 
+                        : "-"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+      </CardContent>
+    </Card>
   );
 }
