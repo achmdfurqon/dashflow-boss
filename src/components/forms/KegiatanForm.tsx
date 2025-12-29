@@ -184,6 +184,7 @@ export const KegiatanForm = ({ onSuccess, initialData }: KegiatanFormProps) => {
         disposisi: selectedDisposisi.length > 0 ? selectedDisposisi : null,
         id_giat_sblm: data.id_giat_sblm || null,
         id_pok: data.id_pok || null,
+        user_id: user.id,
       };
 
       let error;
