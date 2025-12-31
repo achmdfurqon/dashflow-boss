@@ -624,10 +624,12 @@ function ReportView({ activities }: { activities: any[] }) {
                 {format(parseISO(dateKey), "EEEE, dd MMMM yyyy", { locale: localeId })}
               </h3>
               <div className="space-y-4 pl-4">
-                {dateActivities.map((activity) => (
+                {dateActivities.map((activity) => {
+                  const { displayStartTime, displayEndTime } = getDisplayTime(activity, dateKey);
+                  return (
                   <div key={`${dateKey}-${activity.id}`} className="space-y-1">
                     <p className="font-medium text-primary">
-                      {format(parseISO(activity.waktu_mulai), "HH:mm")} - {format(parseISO(activity.waktu_selesai), "HH:mm")}
+                      {displayStartTime} - {displayEndTime}
                     </p>
                     <p className="font-semibold">{activity.nama}</p>
                     <p className="text-sm text-muted-foreground">
@@ -642,7 +644,8 @@ function ReportView({ activities }: { activities: any[] }) {
                         : "-"}
                     </p>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))
