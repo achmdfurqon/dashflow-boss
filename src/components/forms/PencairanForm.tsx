@@ -10,10 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarIcon, ChevronDown, ChevronRight } from "lucide-react";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
+import { CalendarIcon, ChevronDown, ChevronRight, Info } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const pencairanSchema = z.object({
   id_pok: z.string().min(1, "POK is required"),
@@ -45,14 +46,51 @@ export const PencairanForm = ({ onSuccess, initialData }: PencairanFormProps) =>
   const [statusPencairan, setStatusPencairan] = useState<string>("SPP");
   const [metodePencairan, setMetodePencairan] = useState<string>("UP");
   const [showRiilPencairan, setShowRiilPencairan] = useState(false);
+  const [selectedPok, setSelectedPok] = useState<any>(null);
+  const [nilaiPencairanError, setNilaiPencairanError] = useState<string | null>(null);
 
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<PencairanFormData>({
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<PencairanFormData>({
     resolver: zodResolver(pencairanSchema),
     defaultValues: {
       status_pencairan: "SPP",
       metode_pencairan: "UP",
     },
   });
+
+  const watchedNilaiPencairan = watch("nilai_pencairan");
+  const watchedIdPok = watch("id_pok");
+
+  // Update selectedPok when id_pok changes
+  useEffect(() => {
+    if (watchedIdPok) {
+      const pok = pokList.find(p => p.id === watchedIdPok);
+      setSelectedPok(pok || null);
+    } else {
+      setSelectedPok(null);
+    }
+  }, [watchedIdPok, pokList]);
+
+  // Validate nilai_pencairan against POK budget
+  useEffect(() => {
+    if (selectedPok && watchedNilaiPencairan) {
+      const nilaiPencairan = parseFloat(watchedNilaiPencairan);
+      if (!isNaN(nilaiPencairan) && nilaiPencairan > selectedPok.nilai_anggaran) {
+        setNilaiPencairanError(`Nilai pencairan tidak boleh melebihi anggaran POK (${formatCurrency(selectedPok.nilai_anggaran)})`);
+      } else {
+        setNilaiPencairanError(null);
+      }
+    } else {
+      setNilaiPencairanError(null);
+    }
+  }, [watchedNilaiPencairan, selectedPok]);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(value);
+  };
 
   useEffect(() => {
     fetchPOKList();
@@ -104,6 +142,19 @@ export const PencairanForm = ({ onSuccess, initialData }: PencairanFormProps) =>
   };
 
   const onSubmit = async (data: PencairanFormData) => {
+    // Validate nilai_pencairan doesn't exceed POK budget
+    if (selectedPok) {
+      const nilaiPencairan = parseFloat(data.nilai_pencairan);
+      if (nilaiPencairan > selectedPok.nilai_anggaran) {
+        toast({
+          title: "Error",
+          description: `Nilai pencairan tidak boleh melebihi anggaran POK (${formatCurrency(selectedPok.nilai_anggaran)})`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -166,7 +217,10 @@ export const PencairanForm = ({ onSuccess, initialData }: PencairanFormProps) =>
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="id_pok">POK</Label>
-        <Select onValueChange={(value) => setValue("id_pok", value)}>
+        <Select 
+          value={watchedIdPok || ""} 
+          onValueChange={(value) => setValue("id_pok", value)}
+        >
           <SelectTrigger>
             <SelectValue placeholder="Select POK" />
           </SelectTrigger>
@@ -179,6 +233,16 @@ export const PencairanForm = ({ onSuccess, initialData }: PencairanFormProps) =>
           </SelectContent>
         </Select>
         {errors.id_pok && <p className="text-sm text-destructive">{errors.id_pok.message}</p>}
+        
+        {/* Display POK budget info */}
+        {selectedPok && (
+          <Alert className="bg-primary/10 border-primary/20">
+            <Info className="h-4 w-4 text-primary" />
+            <AlertDescription className="text-sm">
+              <span className="font-medium">Anggaran POK:</span> {formatCurrency(selectedPok.nilai_anggaran)}
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -194,8 +258,17 @@ export const PencairanForm = ({ onSuccess, initialData }: PencairanFormProps) =>
             {showRiilPencairan ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </Button>
         </div>
-        <Input id="nilai_pencairan" type="number" step="0.01" {...register("nilai_pencairan")} placeholder="0.00" />
+        <Input 
+          id="nilai_pencairan" 
+          type="number" 
+          step="0.01" 
+          max={selectedPok?.nilai_anggaran}
+          {...register("nilai_pencairan")} 
+          placeholder="0.00" 
+          className={cn(nilaiPencairanError && "border-destructive focus-visible:ring-destructive")}
+        />
         {errors.nilai_pencairan && <p className="text-sm text-destructive">{errors.nilai_pencairan.message}</p>}
+        {nilaiPencairanError && <p className="text-sm text-destructive">{nilaiPencairanError}</p>}
         
         <Collapsible open={showRiilPencairan}>
           <CollapsibleContent className="space-y-2 pt-2">
@@ -281,7 +354,7 @@ export const PencairanForm = ({ onSuccess, initialData }: PencairanFormProps) =>
         </Popover>
       </div>
 
-      <Button type="submit" className="w-full" disabled={loading}>
+      <Button type="submit" className="w-full" disabled={loading || !!nilaiPencairanError}>
         {loading ? (initialData ? "Updating..." : "Creating...") : (initialData ? "Update Disbursement" : "Create Disbursement")}
       </Button>
     </form>
