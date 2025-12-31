@@ -568,7 +568,14 @@ function ReportView({ activities }: { activities: any[] }) {
     
     const text = generateReportText(groupedActivities);
     const encodedText = encodeURIComponent(text);
-    window.open(`https://wa.me/?text=${encodedText}`, "_blank");
+    const whatsappUrl = `https://wa.me/?text=${encodedText}`;
+    
+    // Try window.open first, fallback to location.href for iframe restrictions
+    const newWindow = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      // Fallback: redirect current page
+      window.location.href = whatsappUrl;
+    }
   };
 
   const handleCopyTodayAndUpcoming = async () => {
