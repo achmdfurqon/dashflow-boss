@@ -71,7 +71,7 @@ export function PermissionsManager() {
   ) => {
     const { error } = await supabase
       .from("menu_permissions")
-      .update({ [field]: value })
+      .update({ [field]: value } as never)
       .eq("id", permissionId);
 
     if (error) {

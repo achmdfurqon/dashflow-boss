@@ -16,6 +16,7 @@ import POK from "./pages/POK";
 import Pencairan from "./pages/Pencairan";
 import Eviden from "./pages/Eviden";
 import Akun from "./pages/Akun";
+import { AdminRoute } from "./components/AdminRoute";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -63,7 +64,7 @@ const App = () => (
               <Route path="/pok" element={<ProtectedRoute><DashboardLayout><POK /></DashboardLayout></ProtectedRoute>} />
               <Route path="/pencairan" element={<ProtectedRoute><DashboardLayout><Pencairan /></DashboardLayout></ProtectedRoute>} />
               <Route path="/eviden" element={<ProtectedRoute><DashboardLayout><Eviden /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/akun" element={<ProtectedRoute><DashboardLayout><Akun /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/akun" element={<ProtectedRoute><AdminRoute><DashboardLayout><Akun /></DashboardLayout></AdminRoute></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </YearFilterProvider>
