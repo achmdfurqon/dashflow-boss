@@ -16,6 +16,7 @@ import POK from "./pages/POK";
 import Pencairan from "./pages/Pencairan";
 import Eviden from "./pages/Eviden";
 import Akun from "./pages/Akun";
+import { AdminRoute } from "./components/AdminRoute";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
